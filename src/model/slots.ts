@@ -3,8 +3,8 @@ import {$getSlot, $getSlotNames, $removeSlot, $setSlot} from 'lexical';
 import {
   $isFootnoteDefinitionNode,
   type FootnoteDefinitionNode,
-} from './FootnoteDefinitionNode';
-import type {FootnoteSectionNode} from './FootnoteSectionNode';
+} from '../nodes/FootnoteDefinitionNode';
+import type {FootnoteSectionNode} from '../nodes/FootnoteSectionNode';
 
 /**
  * Definitions live in named slots on the section, keyed by footnote id —

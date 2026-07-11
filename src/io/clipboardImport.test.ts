@@ -16,12 +16,12 @@ import {ClipboardImportExtension} from '@lexical/clipboard';
 import {HorizontalRuleExtension} from '@lexical/extension';
 import {$getSelection, $isRangeSelection} from 'lexical';
 
-import {FootnoteClipboardExtension} from './clipboard';
+import {FootnoteClipboardExtension} from '../clipboard';
 import {
   $getFootnoteDefinitions,
   FootnoteExtension,
-} from './FootnoteExtension';
-import {$createFootnoteRefNode, $isFootnoteRefNode} from './FootnoteRefNode';
+} from '../FootnoteExtension';
+import {$createFootnoteRefNode, $isFootnoteRefNode} from '../nodes/FootnoteRefNode';
 
 /**
  * Microsoft Word puts this on the clipboard as text/html — including its

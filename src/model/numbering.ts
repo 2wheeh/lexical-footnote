@@ -1,8 +1,8 @@
 import {$dfs} from '@lexical/utils';
 import {$getRoot} from 'lexical';
 
-import {$isFootnoteRefNode, type FootnoteRefNode} from './FootnoteRefNode';
-import {$getFootnoteSection} from './FootnoteSectionNode';
+import {$isFootnoteRefNode, type FootnoteRefNode} from '../nodes/FootnoteRefNode';
+import {$getFootnoteSection} from '../nodes/FootnoteSectionNode';
 import {$getDefinitionEntries, $getDefinitionSlot} from './slots';
 
 /**

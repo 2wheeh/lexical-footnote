@@ -10,9 +10,9 @@ import {
   type StateValueOrUpdater,
 } from 'lexical';
 
-import {BACKREF_CLASS, backrefLabel, backrefTargetId} from './gfm';
-import {$computeFootnoteNumbers, $getFootnoteRefs} from './numbering';
-import {footnoteIdState} from './state';
+import {BACKREF_CLASS, backrefLabel, backrefTargetId} from '../io/gfm';
+import {$computeFootnoteNumbers, $getFootnoteRefs} from '../model/numbering';
+import {footnoteIdState} from '../model/state';
 
 /**
  * A footnote definition (`[^id]: ...` in GFM). Holds flow content

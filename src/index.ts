@@ -2,7 +2,7 @@ export {
   $createFootnoteDefinitionNode,
   $isFootnoteDefinitionNode,
   FootnoteDefinitionNode,
-} from './FootnoteDefinitionNode';
+} from './nodes/FootnoteDefinitionNode';
 export {
   $cleanupOrphanFootnotes,
   $computeFootnoteNumbers,
@@ -16,24 +16,24 @@ export {
   INSERT_FOOTNOTE_COMMAND,
   type FootnoteConfig,
 } from './FootnoteExtension';
-export {backrefLabel, backrefTargetId} from './gfm';
+export {backrefLabel, backrefTargetId} from './io/gfm';
 // A note can be cited many times: `$getFootnoteRefs` returns every cue for it,
 // in document order.
-export {$getFootnoteRefs, orderFootnoteIds} from './numbering';
+export {$getFootnoteRefs, orderFootnoteIds} from './model/numbering';
 export {
   $getDefinitionEntries,
   $getDefinitionSlot,
   footnoteSlotName,
-} from './slots';
+} from './model/slots';
 export {
   $createFootnoteRefNode,
   $isFootnoteRefNode,
   FootnoteRefNode,
-} from './FootnoteRefNode';
+} from './nodes/FootnoteRefNode';
 export {
   $createFootnoteSectionNode,
   $isFootnoteSectionNode,
   FootnoteSectionNode,
-} from './FootnoteSectionNode';
-export {FootnoteImportRules} from './htmlImport';
-export {createFootnoteId, footnoteIdState} from './state';
+} from './nodes/FootnoteSectionNode';
+export {FootnoteImportRules} from './io/htmlImport';
+export {createFootnoteId, footnoteIdState} from './model/state';

@@ -17,10 +17,10 @@ import {
 } from 'lexical';
 import {afterEach, describe, expect, it} from 'vitest';
 
-import {$createFootnoteDefinitionNode} from './FootnoteDefinitionNode';
-import {$getFootnoteSection, FootnoteExtension} from './FootnoteExtension';
-import {$createFootnoteRefNode} from './FootnoteRefNode';
-import {FootnoteMdastExtension} from './mdast';
+import {$createFootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
+import {$getFootnoteSection, FootnoteExtension} from '../FootnoteExtension';
+import {$createFootnoteRefNode} from '../nodes/FootnoteRefNode';
+import {FootnoteMdastExtension} from '../mdast';
 import {$setDefinitionSlot} from './slots';
 
 /**

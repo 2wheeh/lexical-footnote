@@ -22,8 +22,8 @@ import {
   $getOrderedFootnoteIds,
   $removeFootnoteDefinition,
   FootnoteExtension,
-} from './FootnoteExtension';
-import {$createFootnoteRefNode, FootnoteRefNode} from './FootnoteRefNode';
+} from '../FootnoteExtension';
+import {$createFootnoteRefNode, FootnoteRefNode} from '../nodes/FootnoteRefNode';
 
 /**
  * The two things the slot model made fragile, exercised rather than argued:

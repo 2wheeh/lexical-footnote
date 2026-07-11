@@ -20,12 +20,12 @@ import {gfmFootnote} from 'micromark-extension-gfm-footnote';
 import {
   $createFootnoteDefinitionNode,
   FootnoteDefinitionNode,
-} from './FootnoteDefinitionNode';
+} from './nodes/FootnoteDefinitionNode';
 import {FootnoteExtension} from './FootnoteExtension';
-import {$createFootnoteRefNode, FootnoteRefNode} from './FootnoteRefNode';
-import {FootnoteSectionNode} from './FootnoteSectionNode';
-import {$computeFootnoteNumbers, orderFootnoteIds} from './numbering';
-import {$getDefinitionEntries, $getDefinitionSlot} from './slots';
+import {$createFootnoteRefNode, FootnoteRefNode} from './nodes/FootnoteRefNode';
+import {FootnoteSectionNode} from './nodes/FootnoteSectionNode';
+import {$computeFootnoteNumbers, orderFootnoteIds} from './model/numbering';
+import {$getDefinitionEntries, $getDefinitionSlot} from './model/slots';
 
 const $importFootnoteReference: MdastImportHandler<FootnoteReference> =
   node => {

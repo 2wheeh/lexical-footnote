@@ -7,9 +7,9 @@ import {
   sel,
 } from '@lexical/html';
 
-import {$createFootnoteDefinitionNode} from './FootnoteDefinitionNode';
-import {$createFootnoteRefNode} from './FootnoteRefNode';
-import {createFootnoteId} from './state';
+import {$createFootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
+import {$createFootnoteRefNode} from '../nodes/FootnoteRefNode';
+import {createFootnoteId} from '../model/state';
 
 /**
  * `fn-<id>` from our own exportDOM, or GitHub's `user-content-fn-<id>`.

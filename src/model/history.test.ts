@@ -12,8 +12,8 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {FootnoteExtension} from './FootnoteExtension';
-import {$createFootnoteRefNode} from './FootnoteRefNode';
+import {FootnoteExtension} from '../FootnoteExtension';
+import {$createFootnoteRefNode} from '../nodes/FootnoteRefNode';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 

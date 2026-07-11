@@ -12,8 +12,8 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {$getFootnoteDefinition, FootnoteExtension} from './FootnoteExtension';
-import {$createFootnoteRefNode} from './FootnoteRefNode';
+import {$getFootnoteDefinition, FootnoteExtension} from '../FootnoteExtension';
+import {$createFootnoteRefNode} from '../nodes/FootnoteRefNode';
 
 /**
  * Caret movement between notes, in real engines.

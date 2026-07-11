@@ -18,7 +18,7 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {$createFootnoteDefinitionNode} from './FootnoteDefinitionNode';
+import {$createFootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
 import {
   $cleanupOrphanFootnotes,
   $computeFootnoteNumbers,
@@ -27,9 +27,9 @@ import {
   $getOrderedFootnoteIds,
   $removeFootnoteDefinition,
   FootnoteExtension,
-} from './FootnoteExtension';
-import {$createFootnoteRefNode} from './FootnoteRefNode';
-import {FootnoteMdastExtension} from './mdast';
+} from '../FootnoteExtension';
+import {$createFootnoteRefNode} from '../nodes/FootnoteRefNode';
+import {FootnoteMdastExtension} from '../mdast';
 import {$setDefinitionSlot} from './slots';
 
 /**

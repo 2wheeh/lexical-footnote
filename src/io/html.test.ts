@@ -16,8 +16,8 @@ import {
   $getFootnoteDefinitions,
   $getFootnoteSection,
   FootnoteExtension,
-} from './FootnoteExtension';
-import {$createFootnoteRefNode, $isFootnoteRefNode} from './FootnoteRefNode';
+} from '../FootnoteExtension';
+import {$createFootnoteRefNode, $isFootnoteRefNode} from '../nodes/FootnoteRefNode';
 
 describe('HTML round-trip', () => {
   let editor: LexicalEditorWithDispose;

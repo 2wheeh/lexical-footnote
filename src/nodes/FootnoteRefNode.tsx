@@ -15,10 +15,10 @@ import {
   type StateValueOrUpdater,
 } from 'lexical';
 
-import {FootnoteExtension} from './FootnoteExtension';
-import {backrefTargetId, FOOTNOTE_LABEL_ID} from './gfm';
-import {$computeFootnoteNumbers, $getFootnoteRefs} from './numbering';
-import {footnoteIdState} from './state';
+import {FootnoteExtension} from '../FootnoteExtension';
+import {backrefTargetId, FOOTNOTE_LABEL_ID} from '../io/gfm';
+import {$computeFootnoteNumbers, $getFootnoteRefs} from '../model/numbering';
+import {footnoteIdState} from '../model/state';
 
 /**
  * The inline footnote cue (`[^id]` in GFM), rendered as a superscript

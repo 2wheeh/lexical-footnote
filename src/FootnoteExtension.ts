@@ -37,38 +37,38 @@ import {
   $createFootnoteDefinitionNode,
   $isFootnoteDefinitionNode,
   FootnoteDefinitionNode,
-} from './FootnoteDefinitionNode';
+} from './nodes/FootnoteDefinitionNode';
 import {
   $createFootnoteRefNode,
   $isFootnoteRefNode,
   FootnoteRefNode,
-} from './FootnoteRefNode';
+} from './nodes/FootnoteRefNode';
 import {
   $createFootnoteSectionNode,
   $getFootnoteSection,
   $isFootnoteSectionNode,
   FootnoteSectionNode,
   FootnoteSectionRenderOverride,
-} from './FootnoteSectionNode';
-import {backrefLabel} from './gfm';
-import {FootnoteImportRules} from './htmlImport';
+} from './nodes/FootnoteSectionNode';
+import {backrefLabel} from './io/gfm';
+import {FootnoteImportRules} from './io/htmlImport';
 import {
   $collectFootnoteRefs,
   $computeFootnoteNumbers,
   $getFootnoteRefs,
   footnoteNumbersOf,
   orderFootnoteIds,
-} from './numbering';
+} from './model/numbering';
 import {
   $getDefinitionEntries,
   $getDefinitionSlot,
   $removeDefinitionSlot,
   $setDefinitionSlot,
-} from './slots';
-import {createFootnoteId} from './state';
+} from './model/slots';
+import {createFootnoteId} from './model/state';
 
-export {$computeFootnoteNumbers} from './numbering';
-export {$getFootnoteSection} from './FootnoteSectionNode';
+export {$computeFootnoteNumbers} from './model/numbering';
+export {$getFootnoteSection} from './nodes/FootnoteSectionNode';
 
 export const INSERT_FOOTNOTE_COMMAND: LexicalCommand<void> =
   /* @__PURE__ */ createCommand('INSERT_FOOTNOTE_COMMAND');

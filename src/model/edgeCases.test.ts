@@ -15,7 +15,7 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {$createFootnoteDefinitionNode} from './FootnoteDefinitionNode';
+import {$createFootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
 import {
   $getFootnoteDefinitions,
   $getFootnoteSection,
@@ -23,8 +23,8 @@ import {
   $removeFootnoteDefinition,
   FootnoteExtension,
   INSERT_FOOTNOTE_COMMAND,
-} from './FootnoteExtension';
-import {$createFootnoteRefNode, $isFootnoteRefNode} from './FootnoteRefNode';
+} from '../FootnoteExtension';
+import {$createFootnoteRefNode, $isFootnoteRefNode} from '../nodes/FootnoteRefNode';
 
 describe('edge cases', () => {
   let editor: LexicalEditorWithDispose;

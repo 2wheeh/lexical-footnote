@@ -10,14 +10,14 @@ import {
   type LexicalNode,
 } from 'lexical';
 
-import type {FootnoteExtension} from './FootnoteExtension';
-import {FOOTNOTE_LABEL_ID} from './gfm';
-import {$computeFootnoteNumbers, orderFootnoteIds} from './numbering';
+import type {FootnoteExtension} from '../FootnoteExtension';
+import {FOOTNOTE_LABEL_ID} from '../io/gfm';
+import {$computeFootnoteNumbers, orderFootnoteIds} from '../model/numbering';
 import {
   $getDefinitionEntries,
   $getDefinitionSlot,
   footnoteIdFromSlotName,
-} from './slots';
+} from '../model/slots';
 
 /**
  * Holds the footnote definitions — in named slots (`fn:<id>`), not as

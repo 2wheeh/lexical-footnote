@@ -14,9 +14,9 @@ import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {
   $getFootnoteDefinitions,
   $getFootnoteSection,
-} from './FootnoteExtension';
-import {$isFootnoteRefNode} from './FootnoteRefNode';
-import {FootnoteMdastExtension} from './mdast';
+} from '../FootnoteExtension';
+import {$isFootnoteRefNode} from '../nodes/FootnoteRefNode';
+import {FootnoteMdastExtension} from '../mdast';
 
 describe('mdast round-trip', () => {
   let editor: LexicalEditorWithDispose;
