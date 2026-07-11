@@ -518,6 +518,28 @@ export const FootnoteExtension = defineExtension({
         );
       });
     };
+    const gotoPreviousDefinitionOrBody = (footnoteId: string) => {
+      editor.focus(() => {
+        editor.update(
+          () => {
+            const definition = $getFootnoteDefinition(footnoteId);
+            const previous = definition?.getPreviousSibling();
+            if ($isFootnoteDefinitionNode(previous)) {
+              previous.selectEnd();
+              return;
+            }
+            // First note: continue up into the body, right above the section.
+            const body = $getFootnoteSection()?.getPreviousSibling();
+            if (body) {
+              body.selectEnd();
+            } else {
+              $getRoot().selectStart();
+            }
+          },
+          {tag: 'footnote-navigation'},
+        );
+      });
+    };
     const createBackrefButton = (footnoteId: string): HTMLButtonElement => {
       const button = document.createElement('button');
       button.type = 'button';
@@ -550,6 +572,10 @@ export const FootnoteExtension = defineExtension({
           // Continue past the backref into the next note.
           event.preventDefault();
           gotoNextDefinitionStart(footnoteId);
+        } else if (key === 'ArrowUp') {
+          // Up into the previous note, or the body above the section.
+          event.preventDefault();
+          gotoPreviousDefinitionOrBody(footnoteId);
         } else if (!event.altKey && key.length === 1) {
           // Typing on the focused backref continues at the note end.
           event.preventDefault();
