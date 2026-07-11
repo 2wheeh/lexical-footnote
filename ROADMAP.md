@@ -18,9 +18,14 @@ prioritized.
   extension.
 - [ ] Extract the overlay/keyboard UI out of `FootnoteExtension.register`
   into its own module (internal refactor, no behavior change).
-- [ ] Replace whole-document `$dfs` walks where possible: `$nodesOfType`
-  for unordered lookups, `$dfsWithSlots` if content moves into slots
-  (maintainer feedback — `$dfs` doesn't traverse slot subtrees).
+- [x] Replace whole-document `$dfs` walks where possible: unordered lookups
+  read the node map (`$nodesOfType`), and the order-sensitive ones now share
+  a single walk (`$collectFootnoteRefs`). `$dfs` not traversing slot subtrees
+  is what makes it exactly a walk of the body — cues live there, definitions
+  are slot values — so it is the right tool here rather than `$dfsWithSlots`.
+- [ ] Export walks the document once per footnote node (`exportDOM` has no
+  shared context to hang a cache on, and caching by editor-state identity
+  goes stale inside an update). Fine at document scale; revisit if it bites.
 
 ## Editing & interop
 
@@ -40,20 +45,25 @@ prioritized.
 - [ ] Plain-text copy of a cue exposes the raw id — derive something
   readable.
 - [ ] Nested footnotes (refs inside definitions) and rich definition content
-  (lists, code blocks) — exercise HTML/mdast round-trips.
+  (lists, code blocks) — exercise HTML/mdast round-trips. Note that a cue
+  inside a note is invisible to the numbering walk today: definitions are
+  slot values, and `$dfs` does not descend into slots.
 
 ## Collaboration & presentation
 
 - [ ] **Yjs / collab verification** — the in-document model should work
   under `@lexical/yjs` in principle (definitions are ordinary nodes);
   verify numbering convergence and transform behavior across clients.
-- [ ] **Named-slot content model** (maintainer suggestion) — attach note
-  content to the ref node itself via lexical named slots
-  (`$isSlotHost` / `$getSlot`), so content renders anywhere and travels
-  with the node on copy/paste. Needs evaluation against GFM's multi-ref
-  semantics (one definition, many refs) and the mdast/HTML export story
-  (slots serialize only by host opt-in) before replacing the in-document
-  section model.
+- [x] **Named-slot content model** (maintainer suggestion) — landed, but
+  hosted on the *section*, not on the cue: GFM keys definitions by
+  identifier, so one note can have many cues, and a cue-hosted slot has no
+  answer for which cue owns the content. Each definition is a slot
+  (`fn:<id>`) on the section — the slot map IS the definition map — which
+  makes "one definition per identifier" structural and leaves display order
+  to be derived. The section stays an ordinary root child because slots on
+  the *root* are invisible to both exporters (`$generateDOMFromNodes` walks
+  `root.getChildren()`; `@lexical/mdast` has no slot awareness), so notes
+  hosted there would silently vanish from HTML and markdown.
 - [ ] **Document-separated presentation layer** — floating footnote editor
   (edit a definition in a popup anchored at its cue, tiptap-style) and an
   optional mirror view for rendering the notes outside the editor, without
