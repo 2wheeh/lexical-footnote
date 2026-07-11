@@ -112,7 +112,7 @@ export function App() {
             GitHub
           </a>
           <a
-            href="https://www.npmjs.com/package/lexical-footnote"
+            href="https://www.npmx.dev/package/lexical-footnote"
             target="_blank"
             rel="noreferrer">
             npm
