@@ -84,11 +84,11 @@ body {
   width: 1px;
 }
 
-/* Focus on the hidden button is projected onto the visible pseudo ↩ —
-   the button itself never becomes visible */
-.lexical-footnote__definition:has(> .lexical-footnote__backref:focus)
+/* Focus on the external proxy button is projected onto the visible
+   pseudo ↩ via a data attribute — the button itself never becomes visible */
+.lexical-footnote__definition[data-lexical-footnote-backref-focus]
   .lexical-footnote__definition-content::after,
-.lexical-footnote__definition:has(> .lexical-footnote__backref:focus)
+.lexical-footnote__definition[data-lexical-footnote-backref-focus]
   .lexical-footnote__definition-content
   > p:nth-last-child(2):has(+ p:last-child > br:only-child)::after {
   background: #6366f1;

@@ -420,19 +420,8 @@ export const FootnoteExtension = defineExtension({
       if (!(target instanceof Element)) {
         return;
       }
-      const backrefButton = target.closest('[data-lexical-footnote-backref]');
       const li = target.closest('[data-lexical-footnote-def]');
       if (!li) {
-        return;
-      }
-      if (backrefButton) {
-        // AT-synthesized clicks on the hidden button; keyboard Enter/Space
-        // is intercepted at keydown before Lexical's own key handling.
-        const footnoteId = li.getAttribute('data-lexical-footnote-def');
-        if (footnoteId) {
-          event.preventDefault();
-          output.gotoRef(footnoteId);
-        }
         return;
       }
       // The backref is a ::after pseudo-element (and the number a ::marker),
@@ -496,85 +485,94 @@ export const FootnoteExtension = defineExtension({
         ? definition
         : null;
     };
-    // Roving keyboard navigation:
-    // - ArrowRight at the end of a note focuses its backref
-    // - Enter/Space on the focused backref navigates back to the ref
-    // - ArrowLeft/Escape on the backref returns the caret to the note end
-    // - Enter while a cue is node-selected opens its definition
-    // Capture phase is required: the backref button sits inside the
-    // contentEditable root, so bubbling keystrokes reach Lexical's own key
-    // handling and mutate the document at the stale selection.
+    // Shared keyboard proxy for the visible pseudo backrefs. It lives
+    // OUTSIDE the contentEditable — any element inside the editable
+    // becomes a caret-movement target (word-jump, ArrowDown) that Lexical
+    // mis-resolves. One button serves all definitions (roving focus); its
+    // focus state is projected onto the active definition's pseudo marker
+    // via a data attribute on the li.
+    let backrefProxy: HTMLButtonElement | null = null;
+    let focusedLi: Element | null = null;
+    const clearProxyFocus = () => {
+      focusedLi?.removeAttribute('data-lexical-footnote-backref-focus');
+      focusedLi = null;
+    };
+    const returnToNoteEnd = (footnoteId: string, thenInsert?: string) => {
+      editor.focus(() => {
+        editor.update(
+          () => {
+            $getFootnoteDefinition(footnoteId)?.selectEnd();
+            if (thenInsert) {
+              const selection = $getSelection();
+              if ($isRangeSelection(selection)) {
+                selection.insertText(thenInsert);
+              }
+            }
+          },
+          {tag: 'footnote-navigation'},
+        );
+      });
+    };
+    const onProxyKeydown = (event: KeyboardEvent) => {
+      const footnoteId = backrefProxy?.dataset.lexicalFootnoteId;
+      if (!footnoteId || event.metaKey || event.ctrlKey) {
+        return;
+      }
+      const {key} = event;
+      if (!event.altKey && !event.shiftKey && (key === 'Enter' || key === ' ')) {
+        event.preventDefault();
+        output.gotoRef(footnoteId);
+      } else if (key === 'ArrowLeft' || key === 'Escape') {
+        event.preventDefault();
+        returnToNoteEnd(footnoteId);
+      } else if (!event.altKey && key.length === 1) {
+        // Typing on the focused backref continues at the note end.
+        event.preventDefault();
+        returnToNoteEnd(footnoteId, key);
+      }
+    };
+    const onProxyClick = () => {
+      // AT-synthesized activation (e.g. VoiceOver) arrives as a click.
+      const footnoteId = backrefProxy?.dataset.lexicalFootnoteId;
+      if (footnoteId) {
+        output.gotoRef(footnoteId);
+      }
+    };
+    const createBackrefProxy = (): HTMLButtonElement => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      // Roving focus: reached with ArrowRight from the end of a note, not
+      // Tab — the editor should be a single tab stop for the page.
+      button.tabIndex = -1;
+      button.className = 'lexical-footnote__backref';
+      button.setAttribute('aria-label', 'Back to reference');
+      return button;
+    };
     const onRootKeydown = (event: KeyboardEvent) => {
       const {key} = event;
       if (event.metaKey || event.ctrlKey || event.shiftKey) {
         return;
       }
-      const target = event.target;
-      if (!(target instanceof Element)) {
-        return;
-      }
-      const backref = target.closest('[data-lexical-footnote-backref]');
-      if (backref) {
-        const footnoteId = backref
-          .closest('[data-lexical-footnote-def]')
-          ?.getAttribute('data-lexical-footnote-def');
-        if (!footnoteId) {
-          return;
-        }
-        // Blur before navigating: with focus on a descendant of the root,
-        // editor.focus() considers the editor already focused and won't
-        // move DOM focus.
-        const $returnToNoteEnd = (thenInsert?: string) => {
-          if (backref instanceof HTMLElement) {
-            backref.blur();
-          }
-          editor.focus(() => {
-            editor.update(
-              () => {
-                $getFootnoteDefinition(footnoteId)?.selectEnd();
-                if (thenInsert) {
-                  const selection = $getSelection();
-                  if ($isRangeSelection(selection)) {
-                    selection.insertText(thenInsert);
-                  }
-                }
-              },
-              {tag: 'footnote-navigation'},
-            );
-          });
-        };
-        if (!event.altKey && (key === 'Enter' || key === ' ')) {
-          event.preventDefault();
-          event.stopPropagation();
-          if (backref instanceof HTMLElement) {
-            backref.blur();
-          }
-          output.gotoRef(footnoteId);
-        } else if (key === 'ArrowLeft' || key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
-          $returnToNoteEnd();
-        } else if (!event.altKey && key.length === 1) {
-          // Typing on the focused backref continues at the note end.
-          event.preventDefault();
-          event.stopPropagation();
-          $returnToNoteEnd(key);
-        }
-        return;
-      }
-      // Plain and Alt (word-jump) ArrowRight both intercept at the note
-      // end: past it the only DOM positions are around the out-of-flow
-      // backref button, which Lexical cannot map.
+      // Plain and Alt (word-jump) ArrowRight both stop at the note end and
+      // hand focus to the backref proxy. Capture phase: bubbling keystrokes
+      // reach Lexical's own key handling first otherwise.
       if (key === 'ArrowRight') {
-        const definition = editor.read($definitionAtSelectionEnd);
-        if (definition) {
-          const button = editor
-            .getElementByKey(definition.getKey())
-            ?.querySelector('[data-lexical-footnote-backref]');
-          if (button instanceof HTMLElement) {
+        const info = editor.read(() => {
+          const definition = $definitionAtSelectionEnd();
+          return definition
+            ? {id: definition.getFootnoteId(), key: definition.getKey()}
+            : null;
+        });
+        if (info && backrefProxy) {
+          const li = editor.getElementByKey(info.key);
+          if (li) {
             event.preventDefault();
             event.stopPropagation();
-            button.focus();
+            backrefProxy.dataset.lexicalFootnoteId = info.id;
+            clearProxyFocus();
+            focusedLi = li;
+            li.setAttribute('data-lexical-footnote-backref-focus', 'true');
+            backrefProxy.focus();
           }
         }
         return;
@@ -600,7 +598,7 @@ export const FootnoteExtension = defineExtension({
         }
       }
     };
-    let removeRootClick: (() => void) | null = null;
+    let removeRootHandlers: (() => void) | null = null;
     // Definition ids as of the last committed state; lets the RootNode
     // transform detect "a definition was deleted" (destroys are invisible
     // to per-node transforms) and apply the policy: deleting a definition
@@ -631,17 +629,28 @@ export const FootnoteExtension = defineExtension({
       }
     };
     return mergeRegister(
-      () => removeRootClick?.(),
+      () => removeRootHandlers?.(),
       editor.registerRootListener(rootElement => {
-        removeRootClick?.();
-        removeRootClick = rootElement
-          ? mergeRegister(
-              registerEventListener(rootElement, 'click', onRootClick),
-              registerEventListener(rootElement, 'keydown', onRootKeydown, {
-                capture: true,
-              }),
-            )
-          : null;
+        removeRootHandlers?.();
+        removeRootHandlers = null;
+        backrefProxy = null;
+        clearProxyFocus();
+        if (!rootElement) {
+          return;
+        }
+        const proxy = createBackrefProxy();
+        rootElement.insertAdjacentElement('afterend', proxy);
+        backrefProxy = proxy;
+        removeRootHandlers = mergeRegister(
+          registerEventListener(rootElement, 'click', onRootClick),
+          registerEventListener(rootElement, 'keydown', onRootKeydown, {
+            capture: true,
+          }),
+          registerEventListener(proxy, 'keydown', onProxyKeydown),
+          registerEventListener(proxy, 'click', onProxyClick),
+          registerEventListener(proxy, 'blur', clearProxyFocus),
+          () => proxy.remove(),
+        );
       }),
       editor.registerCommand(
         DELETE_CHARACTER_COMMAND,

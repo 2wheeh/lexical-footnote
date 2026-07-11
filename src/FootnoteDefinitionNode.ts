@@ -46,26 +46,13 @@ export class FootnoteDefinitionNode extends ElementNode {
     content.className =
       (config.theme.footnoteDefinitionContent as string | undefined) ||
       'lexical-footnote__definition-content';
-    // The VISIBLE backref marker is a CSS ::after pseudo-element on this
-    // div — an in-flow element here would become a caret stop inside the
-    // li. Keyboard/screen-reader access is provided by a separate
-    // out-of-flow (absolutely positioned, visually hidden) button, which
-    // does not participate in line boxes and so is never a caret position.
+    // The visible backref marker is a CSS ::after pseudo-element on this
+    // div, and its keyboard proxy lives OUTSIDE the contentEditable (see
+    // FootnoteExtension). No unmanaged element may live inside the li:
+    // anything here becomes a target for caret movement (word-jump,
+    // ArrowDown) that Lexical then mis-resolves.
     content.setAttribute('data-lexical-footnote-content', 'true');
-    const backref = document.createElement('button');
-    backref.type = 'button';
-    backref.setAttribute('data-lexical-footnote-backref', 'true');
-    backref.contentEditable = 'false';
-    // Roving focus: reached with ArrowRight from the end of the note, not
-    // Tab — the editor should be a single tab stop for the page.
-    backref.tabIndex = -1;
-    backref.className =
-      (config.theme.footnoteBackref as string | undefined) ||
-      'lexical-footnote__backref';
-    // No text content: a text child would be a landing spot for word-jump
-    // caret movement, which Lexical resolves to the document start.
-    backref.setAttribute('aria-label', 'Back to reference');
-    li.append(content, backref);
+    li.append(content);
     return li;
   }
 
