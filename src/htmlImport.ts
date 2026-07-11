@@ -24,14 +24,16 @@ function parseFootnoteId(raw: string, prefix: 'fn' | 'fnref'): string {
 // Word and Google Docs put footnotes on the clipboard as anchor pairs: a
 // cue linking down to the note and a backref linking back up to the cue.
 // The cue patterns end at digits, so they can never match the backrefs
-// (#_ftnref1 / #ftnt_ref1).
+// (#_ftnref1 / #ftnt_ref1). Only the fragment tail is matched, unanchored
+// at the start: Safari rewrites clipboard hrefs to absolute
+// `applewebdata://<uuid>#_ftn1` URLs.
 const CUE_PATTERNS = [
-  {href: /^#_ftn(\d+)$/, source: 'word'},
-  {href: /^#ftnt(\d+)$/, source: 'gdocs'},
+  {href: /#_ftn(\d+)$/, source: 'word'},
+  {href: /#ftnt(\d+)$/, source: 'gdocs'},
 ] as const;
 const WORD_DEF_ID = /^ftn(\d+)$/;
 const GDOCS_DEF_ANCHOR_ID = /^ftnt(\d+)$/;
-const IMPORTED_BACKREF_HREF = /^#(?:_ftnref|ftnt_ref)\d+$/;
+const IMPORTED_BACKREF_HREF = /#(?:_ftnref|ftnt_ref)\d+$/;
 
 /**
  * Source-number → generated id, one map per import pass. Word/Docs number
@@ -157,15 +159,34 @@ const WordDefinitionImportRule = /* @__PURE__ */ defineImportRule({
   name: 'lexical-footnote/word-definition',
 });
 
+/** A direct child that is recognizably a Word footnote body. */
+function hasWordFootnoteChild(el: Element): boolean {
+  for (const child of Array.from(el.children)) {
+    if (
+      child.tagName === 'DIV' &&
+      WORD_DEF_ID.test(child.id ?? '') &&
+      child.querySelector('.MsoFootnoteText') !== null
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Word wraps its notes (and their separator chrome: `<br clear=all>`,
  * `<hr>`) in `<div style="mso-element:footnote-list">`. Import only the
  * notes — the separator is the source app's rendering of the footnote
- * area, which this editor draws itself.
+ * area, which this editor draws itself. Safari strips the mso-element
+ * style from the container, so the structural check (does it hold Word
+ * footnote divs?) stands in when the marker is missing.
  */
 const WordFootnoteListImportRule = /* @__PURE__ */ defineImportRule({
   $import: (ctx, el, $next) => {
-    if (!/mso-element:\s*footnote-list/.test(el.getAttribute('style') ?? '')) {
+    const isFootnoteList =
+      /mso-element:\s*footnote-list/.test(el.getAttribute('style') ?? '') ||
+      hasWordFootnoteChild(el);
+    if (!isFootnoteList) {
       return $next();
     }
     for (const child of Array.from(el.children)) {

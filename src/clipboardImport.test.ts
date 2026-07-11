@@ -38,6 +38,17 @@ const WORD_HTML = `
 </div>
 </body></html>`;
 
+/**
+ * The same Word content pasted through Safari, whose WebKit clipboard
+ * sanitization rewrites hrefs to absolute applewebdata:// URLs and strips
+ * the mso-element styles (classes like MsoFootnoteText survive). Captured
+ * from a real Safari paste.
+ */
+const SAFARI_WORD_HTML = `
+<html xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="UTF-8"></head>
+<p class="MsoNormal"><span lang="EN-US">Body text with a note<a href="applewebdata://E396ADD8-DC93-4910-B26F-ABC040744F04#_ftn1" name="_ftnref1" title=""><span class="MsoFootnoteReference" style="vertical-align: super;"><span><span class="MsoFootnoteReference"><span lang="EN-US">[1]</span></span></span></span></a> and more.<o:p></o:p></span></p>
+<div style="caret-color: rgb(0, 0, 0); color: rgb(0, 0, 0);"><br clear="all"><hr align="left" size="1" width="33%"><div id="ftn1"><p class="MsoFootnoteText"><a href="applewebdata://E396ADD8-DC93-4910-B26F-ABC040744F04#_ftnref1" name="_ftn1" title=""><span class="MsoFootnoteReference"><span lang="EN-US">[1]</span></span></a><span lang="EN-US"><span class="Apple-converted-space"> </span>The footnote body from Safari.<o:p></o:p></span></p></div></div></html>`;
+
 /** Google Docs identifies notes by a leading anchor, not a container. */
 const GDOCS_HTML = `
 <p>Body text with a note<sup><a href="#ftnt1" id="ftnt_ref1">[1]</a></sup> and more.</p>
@@ -115,6 +126,7 @@ describe('word/google-docs clipboard import', () => {
 
   it.each([
     ['Word', WORD_HTML, 'The footnote body from Word.'],
+    ['Word via Safari', SAFARI_WORD_HTML, 'The footnote body from Safari.'],
     ['Google Docs', GDOCS_HTML, 'The footnote body from Google Docs.'],
   ])('imports footnotes pasted from %s', (_label, html, body) => {
     pasteHtml(html);
