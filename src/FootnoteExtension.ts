@@ -52,8 +52,10 @@ import {
 import {backrefLabel} from './gfm';
 import {FootnoteImportRules} from './htmlImport';
 import {
+  $collectFootnoteRefs,
   $computeFootnoteNumbers,
   $getFootnoteRefs,
+  footnoteNumbersOf,
   orderFootnoteIds,
 } from './numbering';
 import {
@@ -728,13 +730,22 @@ export const FootnoteExtension = defineExtension({
       if (!overlay) {
         return;
       }
-      const notes = editor.read(() =>
-        $getOrderedFootnoteIds().map(footnoteId => ({
+      // One walk of the document for all three derivations. This runs on every
+      // commit, and each of numbering, cue counts, and display order sweeps the
+      // whole tree on its own if asked separately.
+      const notes = editor.read(() => {
+        const refs = $collectFootnoteRefs();
+        const numbers = footnoteNumbersOf(refs);
+        const section = $getFootnoteSection();
+        const ids = section
+          ? $getDefinitionEntries(section).map(entry => entry.footnoteId)
+          : [];
+        return orderFootnoteIds(ids, numbers).map(footnoteId => ({
           footnoteId,
-          number: $computeFootnoteNumbers().get(footnoteId) ?? '?',
-          refCount: $getFootnoteRefs(footnoteId).length,
-        })),
-      );
+          number: numbers.get(footnoteId) ?? '?',
+          refCount: refs.get(footnoteId)?.length ?? 0,
+        }));
+      });
       const live = new Set(notes.map(note => note.footnoteId));
       for (const [footnoteId, group] of backrefGroups) {
         if (!live.has(footnoteId)) {
