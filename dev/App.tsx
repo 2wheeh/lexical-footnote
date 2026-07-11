@@ -122,9 +122,12 @@ export function App() {
         </nav>
       </header>
       <p className="site-tagline">
-        GFM footnotes for Lexical — insert with the button, by typing{' '}
-        <code>[^id]</code>, or by <strong>pasting from Word / Google Docs</strong>.
-        Click a cue to jump, ↩ to jump back, arrow keys traverse notes.
+        GFM footnotes for Lexical — insert with the button or by typing{' '}
+        <code>[^id]</code>. Click a cue to jump, ↩ to jump back, arrow keys
+        traverse notes.
+      </p>
+      <p className="site-tagline site-tagline--sub">
+        Pasting footnotes from a Word / Google Docs web view works too.
       </p>
       <LexicalExtensionComposer extension={appExtension}>
         <Toolbar />
