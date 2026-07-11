@@ -424,21 +424,13 @@ export const FootnoteExtension = defineExtension({
         return;
       }
       // The backref is a ::after pseudo-element (and the number a ::marker),
-      // so those clicks land on the pseudo's owner (li / content div / the
-      // paragraph carrying the backref while the trailing paragraph is
-      // empty); clicks on the note's text land on deeper elements (spans)
-      // and fall through to editing.
-      const isEmptyParagraph = (el: Element | null): boolean =>
-        el?.tagName === 'P' &&
-        el.childElementCount === 1 &&
-        el.firstElementChild?.tagName === 'BR';
+      // so those clicks land on the pseudo's owner (li / content div);
+      // clicks on the note's text land on deeper elements (spans) and fall
+      // through to editing.
       const isChrome =
         target === li ||
         (target instanceof HTMLElement &&
-          target.hasAttribute('data-lexical-footnote-content')) ||
-        (target.tagName === 'P' &&
-          isEmptyParagraph(target.nextElementSibling) &&
-          target.nextElementSibling === target.parentElement?.lastElementChild);
+          target.hasAttribute('data-lexical-footnote-content'));
       if (!isChrome) {
         return;
       }

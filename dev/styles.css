@@ -87,10 +87,7 @@ body {
 /* Focus on the external proxy button is projected onto the visible
    pseudo ↩ via a data attribute — the button itself never becomes visible */
 .lexical-footnote__definition[data-lexical-footnote-backref-focus]
-  .lexical-footnote__definition-content::after,
-.lexical-footnote__definition[data-lexical-footnote-backref-focus]
-  .lexical-footnote__definition-content
-  > p:nth-last-child(2):has(+ p:last-child > br:only-child)::after {
+  .lexical-footnote__definition-content::after {
   background: #6366f1;
   border-radius: 3px;
   color: #fff;
@@ -123,12 +120,8 @@ body {
 }
 
 /* Backref as a pseudo-element: visible and clickable, never a caret stop.
-   Attached to the content div normally; when the trailing paragraph is
-   empty (<p><br></p> while composing), it moves up to the previous
-   paragraph so it stays glued to the last content line. */
-.lexical-footnote__definition-content::after,
-.lexical-footnote__definition-content
-  > p:nth-last-child(2):has(+ p:last-child > br:only-child)::after {
+   Always at the very end of the note's last line. */
+.lexical-footnote__definition-content::after {
   color: #6366f1;
   content: '↩';
   cursor: pointer;
@@ -136,13 +129,21 @@ body {
   margin-left: 0.25em;
 }
 
-.lexical-footnote__definition-content:has(
-    > p:last-child > br:only-child
-  )::after {
-  content: none;
+/* An empty trailing paragraph renders as <p><br></p>; suppress that br's
+   line break so the ↩ shares the caret's line instead of dropping below.
+   inline-block + min-height keeps a caret-sized box so the caret stays
+   visible inside the otherwise empty paragraph. */
+.lexical-footnote__definition-content > p:last-child:has(> br:only-child) {
+  display: inline-block;
+  min-height: 1lh;
+  min-width: 1px;
+  vertical-align: text-bottom;
 }
 
-.lexical-footnote__definition-content:hover::after,
-.lexical-footnote__definition-content:hover > p::after {
+.lexical-footnote__definition-content > p:last-child > br:only-child {
+  display: none;
+}
+
+.lexical-footnote__definition-content:hover::after {
   text-decoration: underline;
 }
