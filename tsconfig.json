@@ -13,5 +13,12 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "dev", "tsdown.config.ts", "vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "dev",
+    "spike",
+    "tsdown.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

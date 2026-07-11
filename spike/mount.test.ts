@@ -1,5 +1,5 @@
 /**
- * Spike C — mount freedom.
+ * Mount freedom.
  *
  * Question: can a named-slot subtree be rendered (and stay editable) in a DOM
  * element that lives OUTSIDE the editor's root element (sidebar / popup)?
@@ -256,7 +256,7 @@ function runCell(hostKind: HostKind, targetKind: TargetKind): CellResult {
 const HOSTS: HostKind[] = ['decorator', 'ce-false', 'plain'];
 const TARGETS: TargetKind[] = ['inside-root', 'outside-root'];
 
-describe('Spike C: mountSlotContainer freedom (3 hosts x 2 targets)', () => {
+describe('mountSlotContainer freedom (3 hosts x 2 targets)', () => {
   for (const hostKind of HOSTS) {
     for (const targetKind of TARGETS) {
       test(`${hostKind} host -> ${targetKind} target`, () => {

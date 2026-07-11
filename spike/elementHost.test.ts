@@ -1,7 +1,9 @@
 /**
- * Spike A (R3'): can a plain ElementNode whose createDOM() returns a
- * contentEditable="false" shell act as a named-slot host, the way a
- * DecoratorNode does?
+ * Can a plain ElementNode whose createDOM() returns a contentEditable="false"
+ * shell act as a named-slot host, the way a DecoratorNode does?
+ *
+ * This is what the footnote section is, so the answer decides whether the notes
+ * are editable islands — mountable anywhere — or merely inert content.
  *
  * The reconciler decides slot-container editability in $applySlotEditable
  * (LexicalReconciler.ts ~489):
@@ -12,9 +14,10 @@
  *     container.removeAttribute('contenteditable');
  *   }
  *
- * R3' hinges on the second half of that condition firing for an ElementNode
- * host. Everything here runs against a real editor with a root element attached
- * to document.body (slot containers only reconcile with a root element).
+ * Everything hinges on the second half of that condition firing for an
+ * ElementNode host. It all runs against a real editor with a root element
+ * attached to document.body (slot containers only reconcile with a root
+ * element).
  *
  * Environment: happy-dom. It stores contentEditable faithfully but has no
  * layout, no hit-testing and no native caret/beforeinput, so the browser-side
@@ -48,7 +51,7 @@ import {afterEach, describe, expect, it} from 'vitest';
 // ---------------------------------------------------------------------------
 
 /**
- * R3': the footnotes-section shell — a plain ElementNode rendered
+ * The footnotes-section shell — a plain ElementNode rendered
  * contentEditable=false. All content lives in slots, so it has zero children.
  */
 class ShellHostNode extends ElementNode {
@@ -219,7 +222,7 @@ function slotContainerOf(
 
 // ---------------------------------------------------------------------------
 // Precondition: does happy-dom implement the property the reconciler branches
-// on? If HTMLElement#contentEditable were not a real property here, the R3'
+// on? If HTMLElement#contentEditable were not a real property here, the
 // branch could never fire for reasons that have nothing to do with Lexical, and
 // every result below would be an artifact of the test environment.
 // ---------------------------------------------------------------------------
@@ -246,7 +249,7 @@ describe('precondition: happy-dom contentEditable', () => {
 // Check 1 (decisive): slot-container editability per host kind.
 // ---------------------------------------------------------------------------
 
-describe('check 1: slot container editability (the R3-prime question)', () => {
+describe('check 1: slot container editability (the whole question)', () => {
   it('contentEditable=false ElementNode host: container IS marked editable and carries __lexicalEditor', () => {
     const editor = makeEditor();
     const {hostKey} = mountHost(editor, () => new ShellHostNode(), {
@@ -350,7 +353,7 @@ describe('check 2: zero-children host viability', () => {
     const {hostKey, slotKeys} = mountHost(editor, () => new ShellHostNode(), {
       'fn:a': 'definition a',
     });
-    const defKey = slotKeys['fn:a'];
+    const defKey = slotKeys['fn:a']!;
 
     editor.read(() => {
       const host = $getRoot().getFirstChildOrThrow<ShellHostNode>();
@@ -407,7 +410,7 @@ describe('check 2: zero-children host viability', () => {
       {discrete: true},
     );
     editor.read(() => {
-      const host = $getRoot().getFirstChildOrThrow();
+      const host = $getRoot().getFirstChildOrThrow<ShellHostNode>();
       expect(host.getKey()).toBe(hostKey);
       expect(host.getChildrenSize()).toBe(0);
       expect(host.isAttached()).toBe(true);
@@ -429,7 +432,7 @@ describe('check 2: zero-children host viability', () => {
     const strict = mountHost(makeEditor(), () => new StrictShellHostNode(), {
       'fn:a': 'definition a',
     });
-    const strictEditor = openEditors[openEditors.length - 1].editor;
+    const strictEditor = openEditors[openEditors.length - 1]!.editor;
 
     const childTags = (dom: HTMLElement) =>
       Array.from(dom.children).map((el) => el.tagName);
@@ -540,7 +543,7 @@ describe('check 3: selection containment', () => {
         $getRoot().getFirstChildOrThrow<ShellHostNode>().selectEnd();
         const selection = $getSelection();
         expect($isRangeSelection(selection)).toBe(true);
-        expect(selection!.getNodes()[0].getKey()).toBe(hostKey);
+        expect(selection!.getNodes()[0]!.getKey()).toBe(hostKey);
         selection!.insertText('leaked');
       },
       {discrete: true},
@@ -560,7 +563,7 @@ describe('check 3: selection containment', () => {
     });
 
     editor.read(() => {
-      const host = $getRoot().getFirstChildOrThrow();
+      const host = $getRoot().getFirstChildOrThrow<ShellHostNode>();
       expect(host.getKey()).toBe(hostKey);
       expect(host.getChildrenSize()).toBe(0);
       expect(INTERNAL_$isBlock(host)).toBe(false);

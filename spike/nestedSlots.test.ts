@@ -1,7 +1,10 @@
 /**
- * Spike B — nested named slots (task #6).
+ * Nested named slots: a slot host that is itself a slot value.
  *
- * Shape under test:
+ * Shape under test — note that this is the shape the project REJECTED (the
+ * section hosted in a slot on the root, which no exporter reaches; see
+ * rootSlot.test.ts). Kept because the mechanics it pins down — slots nesting,
+ * GC, JSON round-trip — are the ones the shipped model relies on.
  *   RootNode
  *    └─ slot "footnotes" → SpikeSectionNode        (a slot HOST itself)
  *                           ├─ slot "fn:a" → SpikeDefNode (ElementNode + paragraph children)

@@ -18,11 +18,12 @@ import {
 import {describe, expect, it} from 'vitest';
 
 /**
- * Spike C — what breaks when document content is hosted in a slot on the ROOT.
+ * What breaks when document content is hosted in a slot on the ROOT.
  *
- * This is the shape the maintainer sketched and this project rejected. The
- * reasons are measured here rather than remembered, with plain nodes and none
- * of the footnote extension's own transforms in the way.
+ * This is the shape the project rejected — the footnote section attached to the
+ * root by slot rather than as an ordinary child. The reasons are measured here
+ * rather than remembered, with plain nodes and none of the footnote extension's
+ * own transforms in the way.
  */
 class SectionNode extends ElementNode {
   $config() {
