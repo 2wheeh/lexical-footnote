@@ -158,6 +158,46 @@ const WordDefinitionImportRule = /* @__PURE__ */ defineImportRule({
 });
 
 /**
+ * Word wraps its notes (and their separator chrome: `<br clear=all>`,
+ * `<hr>`) in `<div style="mso-element:footnote-list">`. Import only the
+ * notes — the separator is the source app's rendering of the footnote
+ * area, which this editor draws itself.
+ */
+const WordFootnoteListImportRule = /* @__PURE__ */ defineImportRule({
+  $import: (ctx, el, $next) => {
+    if (!/mso-element:\s*footnote-list/.test(el.getAttribute('style') ?? '')) {
+      return $next();
+    }
+    for (const child of Array.from(el.children)) {
+      if (child.tagName === 'HR' || child.tagName === 'BR') {
+        child.remove();
+      }
+    }
+    return ctx.$importChildren(el);
+  },
+  match: sel.tag('div'),
+  name: 'lexical-footnote/word-footnote-list',
+});
+
+/**
+ * Google Docs draws its footnote separator as a bare `<hr>` immediately
+ * before the notes block. Drop it only in that context; any other `<hr>`
+ * falls through to the core rule.
+ */
+const GoogleDocsSeparatorImportRule = /* @__PURE__ */ defineImportRule({
+  $import: (_ctx, el, $next) => {
+    const next = el.nextElementSibling;
+    const anchor = next?.querySelector('a[id]');
+    const isFootnoteSeparator =
+      anchor != null &&
+      GDOCS_DEF_ANCHOR_ID.test(anchor.getAttribute('id') ?? '');
+    return isFootnoteSeparator ? [] : $next();
+  },
+  match: sel.tag('hr'),
+  name: 'lexical-footnote/gdocs-separator',
+});
+
+/**
  * Google Docs: `<p><a href="#ftnt_ref1" id="ftnt1">[1]</a> …</p>` — the
  * note is identified by its leading anchor, not by a container attribute.
  * (Body cues carry `id="ftnt_ref1"`, which the pattern rejects.)
@@ -186,6 +226,8 @@ export const FootnoteImportRules = [
   FootnoteRefImportRule,
   FootnoteDefinitionImportRule,
   FootnoteSectionImportRule,
+  WordFootnoteListImportRule,
   WordDefinitionImportRule,
+  GoogleDocsSeparatorImportRule,
   GoogleDocsDefinitionImportRule,
 ];

@@ -13,6 +13,7 @@ import {
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
 import {ClipboardImportExtension} from '@lexical/clipboard';
+import {HorizontalRuleExtension} from '@lexical/extension';
 import {$getSelection, $isRangeSelection} from 'lexical';
 
 import {FootnoteClipboardExtension} from './clipboard';
@@ -20,11 +21,17 @@ import {$isFootnoteDefinitionNode} from './FootnoteDefinitionNode';
 import {$getFootnoteSection, FootnoteExtension} from './FootnoteExtension';
 import {$createFootnoteRefNode, $isFootnoteRefNode} from './FootnoteRefNode';
 
-/** Microsoft Word puts this on the clipboard as text/html. */
+/**
+ * Microsoft Word puts this on the clipboard as text/html — including its
+ * footnote-area separator chrome (`<br clear=all><hr>`) inside the
+ * footnote-list container.
+ */
 const WORD_HTML = `
 <html xmlns:w="urn:schemas-microsoft-com:office:word"><body>
 <p class="MsoNormal">Body text with a note<a href="#_ftn1" name="_ftnref1"><span class="MsoFootnoteReference">[1]</span></a> and more.</p>
 <div style="mso-element:footnote-list">
+  <br clear="all">
+  <hr align="left" size="1" width="33%">
   <div style="mso-element:footnote" id="ftn1">
     <p class="MsoFootnoteText"><a href="#_ftnref1" name="_ftn1"><span class="MsoFootnoteReference">[1]</span></a> The footnote body from Word.</p>
   </div>
@@ -42,7 +49,9 @@ describe('word/google-docs clipboard import', () => {
 
   beforeEach(() => {
     editor = buildEditorFromExtensions({
-      dependencies: [FootnoteExtension],
+      // HorizontalRuleExtension is registered so a source-app separator
+      // <hr> WOULD materialize if the import rules failed to drop it.
+      dependencies: [FootnoteExtension, HorizontalRuleExtension],
       name: 'test-root',
       namespace: 'test',
     });
@@ -118,6 +127,13 @@ describe('word/google-docs clipboard import', () => {
     expect(bodyText).toContain('and more.');
     // the source's literal "[1]" marker and its backref anchor are dropped
     expect(defText).not.toContain('[1]');
+    // the source app's footnote-area separator (<hr>) is chrome, not content
+    editor.read(() => {
+      const types = $getRoot()
+        .getChildren()
+        .map(child => child.getType());
+      expect(types).not.toContain('horizontalrule');
+    });
   });
 
   it('duplicates footnotes when the same content is pasted twice', () => {
