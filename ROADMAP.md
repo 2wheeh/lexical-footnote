@@ -29,9 +29,11 @@ prioritized.
   sanitized payloads) and Google Docs' exported/published HTML; source
   separators and literal markers are stripped, and pasted notes get fresh
   ids. Requires the `lexical-footnote/clipboard` entry.
-- [ ] **Copy/paste between lexical-footnote editors** — copying a ref
-  without its section heals an empty definition in the target; carry the
-  definition content in the clipboard payload.
+- [ ] **Carry the definition in the clipboard** — a cue copied without its
+  section heals an *empty* definition in the target, and cutting a cue now
+  deletes its note (deletion propagates), so cut-and-paste loses the note's
+  text rather than moving it. A single undo restores it, but the fix is to
+  put the definition in the clipboard payload.
 - [ ] **Markdown export identifier normalization** — generated ids export as
   `[^k3j9x2m1]`; normalize to `[^1]`-style sequential identifiers while
   preserving authored labels.

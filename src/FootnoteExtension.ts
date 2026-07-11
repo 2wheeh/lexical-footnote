@@ -30,6 +30,7 @@ import {
   TextNode,
   type LexicalCommand,
   type LexicalEditor,
+  type LexicalNode,
 } from 'lexical';
 
 import {
@@ -146,16 +147,9 @@ function mapsEqual(
 }
 
 /**
- * Removes every ref with this id and its definition. This is the explicit
- * "delete footnote" operation; merely deleting a definition in the editor
- * leaves its refs dangling (they heal an empty definition when next
- * touched).
- */
-/**
- * Removes just the definition, leaving its refs behind — they are cleaned up
- * by the same-update policy in $removeRefsOfDeletedDefs. Definitions are slot
- * values, so `definition.remove()` (a children-channel operation) does not
- * detach them; this is the way.
+ * Removes just the definition; its refs follow in the same update (see
+ * $propagateDeletions). Definitions are slot values, so `definition.remove()`
+ * — a children-channel operation — does not detach them; this is the way.
  */
 export function $removeFootnoteDefinition(footnoteId: string): void {
   const section = $getFootnoteSection();
@@ -178,9 +172,11 @@ export function $removeFootnote(footnoteId: string): void {
 }
 
 /**
- * Removes definitions that no ref points to. Orphans are otherwise kept
- * (so a plain undo after deleting a ref restores everything); this is the
- * explicit, permanent cleanup — mirroring tiptap's cleanupOrphanFootnotes.
+ * Removes definitions that no ref points to — the ones whose refs the user
+ * deleted, and the ones that never had a ref (GFM allows a definition nothing
+ * refers to, and both importers preserve them). Orphans are kept by default so
+ * that deleting a cue is recoverable and cutting one still carries its note;
+ * this is the explicit, permanent discard — tiptap's cleanupOrphanFootnotes.
  *
  * @returns true when at least one orphaned definition was removed.
  */
@@ -380,6 +376,48 @@ function $textToRefTransform(node: TextNode): void {
     target.replace(ref);
     ref.selectEnd();
   }
+}
+
+/** The definition the collapsed selection sits inside, if any. */
+function $definitionAtSelection(): FootnoteDefinitionNode | null {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+    return null;
+  }
+  for (
+    let node: LexicalNode | null = selection.anchor.getNode();
+    node;
+    node = node.getParent()
+  ) {
+    if ($isFootnoteDefinitionNode(node)) {
+      return node;
+    }
+  }
+  return null;
+}
+
+/**
+ * Emptying a note and deleting again removes it — the only way to delete a
+ * definition from the keyboard. A definition is a slot value: it has no
+ * siblings to merge into, and no caret in the body can reach it, so the
+ * ordinary "backspace at the start of a block" path can never delete one.
+ * Its refs follow it out (see $propagateDeletions), so a single undo brings
+ * the whole footnote back.
+ */
+function $deleteEmptyDefinition(): boolean {
+  const definition = $definitionAtSelection();
+  if (!definition || definition.getTextContent() !== '') {
+    return false;
+  }
+  const body = $getFootnoteSection()?.getPreviousSibling();
+  $removeFootnoteDefinition(definition.getFootnoteId());
+  // The caret is inside the node being deleted; put it back in the document.
+  if ($isElementNode(body)) {
+    body.selectEnd();
+  } else {
+    $getRoot().selectEnd();
+  }
+  return true;
 }
 
 /**
@@ -678,12 +716,18 @@ export const FootnoteExtension = defineExtension({
       }
     };
     /**
-     * The reconciler owns the section's DOM (it creates each definition's
-     * `<li>` through the render override) — we only project the derived
-     * display order onto it. Slot-map order is code-unit order, so the list
-     * is a flex column ordered by `--order`, never by DOM position.
+     * The `<li>`s are ours, not the reconciler's: the render override creates
+     * one on demand as each definition's slot container needs a home, and the
+     * reconciler only ever attaches and detaches the container *inside* it. So
+     * an item whose definition is gone is ours to reclaim, or it lingers as an
+     * empty numbered row.
+     *
+     * The rest is projection. Slot-map order is code-unit order of the ids, so
+     * DOM order is meaningless: display order comes from `order` (a flex
+     * column — moving the `<li>`s would move the DOM selection with them), and
+     * the marker from `value`, since `::marker` counts DOM position.
      */
-    const syncSectionOrder = () => {
+    const syncSectionList = () => {
       const {sectionKey, orderedIds} = editor.read(() => {
         const section = $getFootnoteSection();
         return {
@@ -700,27 +744,33 @@ export const FootnoteExtension = defineExtension({
       if (!(list instanceof HTMLElement)) {
         return;
       }
+      const live = new Set(orderedIds);
+      for (const item of Array.from(
+        list.querySelectorAll('[data-lexical-footnote-item]'),
+      )) {
+        if (!live.has(item.getAttribute('data-lexical-footnote-item') ?? '')) {
+          item.remove();
+        }
+      }
       orderedIds.forEach((footnoteId, index) => {
         const item = list.querySelector(
           `[data-lexical-footnote-item="${footnoteId}"]`,
         );
-        if (item instanceof HTMLElement) {
-          item.style.setProperty('--order', String(index + 1));
+        if (item instanceof HTMLLIElement) {
           item.style.order = String(index + 1);
+          item.value = index + 1;
         }
       });
     };
-    const scheduleSectionSync = () => {
+    const scheduleBackrefs = () => {
       const rootElement = currentRoot;
-      if (!rootElement) {
+      if (!rootElement || !overlay) {
         return;
       }
+      // Measurement needs layout, so it waits for the frame; the list sync
+      // above does not, and runs synchronously on commit.
       const run = () => {
-        if (currentRoot !== rootElement) {
-          return;
-        }
-        syncSectionOrder();
-        if (overlay) {
+        if (currentRoot === rootElement && overlay) {
           positionBackrefs(rootElement);
         }
       };
@@ -772,11 +822,13 @@ export const FootnoteExtension = defineExtension({
       }
     };
     let removeRootHandlers: (() => void) | null = null;
-    // Definition ids as of the last committed state; lets the RootNode
-    // transform detect "a definition was deleted" (destroys are invisible
-    // to per-node transforms) and apply the policy: deleting a definition
-    // deletes its refs, in the same update so undo restores both.
+    // Ref and definition ids as of the last committed state. Destroys are
+    // invisible to per-node transforms, so a RootNode transform diffs these
+    // snapshots to see what the user deleted, and propagates it: a footnote
+    // is one thing, and deleting either half deletes the other. Doing it in
+    // the same update is what makes a single undo restore both.
     let knownDefIds: ReadonlySet<string> = new Set();
+    let knownRefIds: ReadonlySet<string> = new Set();
     const $collectDefIds = (): ReadonlySet<string> => {
       const section = $getFootnoteSection();
       return new Set(
@@ -785,16 +837,50 @@ export const FootnoteExtension = defineExtension({
           : [],
       );
     };
-    const $removeRefsOfDeletedDefs = (): void => {
-      const currentIds = $collectDefIds();
+    const $collectRefIds = (): ReadonlySet<string> =>
+      new Set(
+        [...$nodesOfType(FootnoteRefNode)].map(ref => ref.getFootnoteId()),
+      );
+    /** Nothing left in the document but the footnote section. */
+    const $bodyIsEmpty = (section: FootnoteSectionNode): boolean => {
+      const body = $getRoot()
+        .getChildren()
+        .filter(child => child !== section);
+      return (
+        body.length > 0 &&
+        body.every(child => $isElementNode(child) && child.isEmpty())
+      );
+    };
+    const $propagateDeletions = (): void => {
+      const defIds = $collectDefIds();
+      const refIds = $collectRefIds();
+      // Deleting a definition deletes its refs. The converse does not hold:
+      // a ref-less definition is a legal GFM orphan (importers produce them
+      // too), so it survives its refs and $cleanupOrphanFootnotes is what
+      // discards it.
       for (const id of knownDefIds) {
-        if (!currentIds.has(id)) {
+        if (!defIds.has(id)) {
           for (const ref of $nodesOfType(FootnoteRefNode)) {
             if (ref.getFootnoteId() === id) {
               ref.remove();
             }
           }
         }
+      }
+      // ...but notes belong to a document. When an edit empties the body of
+      // everything — select-all + delete — there is nothing left for them to
+      // annotate, so the section goes too (one undo brings it all back).
+      // Gated on the document having *had* refs, so that a document which
+      // merely arrives ref-less (an import of nothing but definitions) is
+      // left alone.
+      const section = $getFootnoteSection();
+      if (
+        section &&
+        knownRefIds.size > 0 &&
+        refIds.size === 0 &&
+        $bodyIsEmpty(section)
+      ) {
+        section.remove();
       }
     };
     return mergeRegister(
@@ -813,7 +899,7 @@ export const FootnoteExtension = defineExtension({
         overlayElement.className = 'lexical-footnote__backref-overlay';
         rootElement.insertAdjacentElement('afterend', overlayElement);
         overlay = overlayElement;
-        syncSectionOrder();
+        syncSectionList();
         positionBackrefs(rootElement);
         removeRootHandlers = mergeRegister(
           registerEventListener(rootElement, 'keydown', onRootKeydown, {
@@ -832,10 +918,11 @@ export const FootnoteExtension = defineExtension({
       }),
       editor.registerCommand(
         DELETE_CHARACTER_COMMAND,
-        $selectRefOnDeleteCharacter,
+        (isBackward: boolean) =>
+          $deleteEmptyDefinition() || $selectRefOnDeleteCharacter(isBackward),
         COMMAND_PRIORITY_LOW,
       ),
-      editor.registerNodeTransform(RootNode, $removeRefsOfDeletedDefs),
+      editor.registerNodeTransform(RootNode, $propagateDeletions),
       // Recompute on every update: dirty-set gating misses refs inside
       // wholesale subtree operations (clear, move, undo/redo's historic
       // state swaps), and mapsEqual keeps the signal referentially stable.
@@ -843,8 +930,12 @@ export const FootnoteExtension = defineExtension({
       // which never happens in headless usage (tests, SSR, export workers).
       editor.registerUpdateListener(() => {
         recomputeNumbers();
-        knownDefIds = editor.read($collectDefIds);
-        scheduleSectionSync();
+        editor.read(() => {
+          knownDefIds = $collectDefIds();
+          knownRefIds = $collectRefIds();
+        });
+        syncSectionList();
+        scheduleBackrefs();
       }),
       editor.registerCommand(
         INSERT_FOOTNOTE_COMMAND,
