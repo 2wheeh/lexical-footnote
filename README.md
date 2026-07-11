@@ -55,9 +55,14 @@ code-formatted text):
 ```ts
 editor.dispatchCommand(INSERT_FOOTNOTE_COMMAND, undefined);
 // or
-const {insertFootnote, gotoDefinition, gotoRef, numbers} =
+const {insertFootnote, gotoDefinition, gotoRef, cleanupOrphans, numbers} =
   getExtensionDependencyFromEditor(editor, FootnoteExtension).output;
+
+gotoRef(id); // a note cited more than once: gotoRef(id, 2) for its 2nd cue
 ```
+
+`numbers` is a signal of `Map<footnoteId, number>` — the displayed numbering,
+derived from cue order on every commit and never stored on a node.
 
 ### Markdown (optional)
 
