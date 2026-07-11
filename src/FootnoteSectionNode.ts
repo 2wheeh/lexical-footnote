@@ -1,6 +1,7 @@
 import {
   $create,
   ElementNode,
+  type DOMExportOutput,
   type EditorConfig,
   type LexicalNode,
 } from 'lexical';
@@ -27,6 +28,18 @@ export class FootnoteSectionNode extends ElementNode {
 
   updateDOM(): boolean {
     return false;
+  }
+
+  /** GFM-style HTML: `<section data-footnotes><ol>…definitions…</ol></section>` */
+  exportDOM(): DOMExportOutput {
+    const section = document.createElement('section');
+    section.setAttribute('data-footnotes', 'true');
+    const ol = document.createElement('ol');
+    section.appendChild(ol);
+    return {
+      append: child => ol.appendChild(child),
+      element: section,
+    };
   }
 
   canIndent(): false {

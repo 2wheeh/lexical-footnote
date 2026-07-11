@@ -3,7 +3,9 @@ import {
   $getState,
   $setState,
   ElementNode,
+  type DOMExportOutput,
   type EditorConfig,
+  type ElementDOMSlot,
   type LexicalNode,
   type StateConfigValue,
   type StateValueOrUpdater,
@@ -40,11 +42,56 @@ export class FootnoteDefinitionNode extends ElementNode {
     li.className =
       (config.theme.footnoteDefinition as string | undefined) ||
       'lexical-footnote__definition';
+    const content = document.createElement('div');
+    content.className =
+      (config.theme.footnoteDefinitionContent as string | undefined) ||
+      'lexical-footnote__definition-content';
+    const backref = document.createElement('button');
+    backref.type = 'button';
+    backref.setAttribute('data-lexical-footnote-backref', 'true');
+    backref.contentEditable = 'false';
+    backref.textContent = '↩';
+    backref.setAttribute('aria-label', 'Back to reference');
+    li.append(content, backref);
     return li;
+  }
+
+  /** Children reconcile into the content wrapper, not the `<li>` itself. */
+  getDOMSlot(dom: HTMLElement): ElementDOMSlot<HTMLElement> {
+    const content = dom.firstElementChild;
+    return content instanceof HTMLElement
+      ? super.getDOMSlot(dom).withElement(content)
+      : super.getDOMSlot(dom);
   }
 
   updateDOM(): boolean {
     return false;
+  }
+
+  /** GFM-style HTML: `<li id="fn-id">…<a href="#fnref-id" data-footnote-backref>↩</a></li>` */
+  exportDOM(): DOMExportOutput {
+    const id = this.getFootnoteId();
+    const li = document.createElement('li');
+    li.setAttribute('id', `fn-${id}`);
+    return {
+      // Mutates in place and returns undefined: returning the element itself
+      // would trigger `element.replaceWith(element)` in the exporter.
+      after: generatedElement => {
+        if (generatedElement instanceof HTMLElement) {
+          const backref = document.createElement('a');
+          backref.setAttribute('href', `#fnref-${id}`);
+          backref.setAttribute('data-footnote-backref', 'true');
+          backref.setAttribute('aria-label', 'Back to reference');
+          backref.textContent = '↩';
+          const last = generatedElement.lastElementChild;
+          (last?.tagName === 'P' ? last : generatedElement).appendChild(
+            backref,
+          );
+        }
+        return undefined;
+      },
+      element: li,
+    };
   }
 
   canIndent(): false {

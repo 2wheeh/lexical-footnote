@@ -1,4 +1,5 @@
 import {signal} from '@lexical/extension';
+import {CoreImportExtension, DOMImportExtension} from '@lexical/html';
 import {$dfs, mergeRegister} from '@lexical/utils';
 import {
   $createParagraphNode,
@@ -7,8 +8,10 @@ import {
   $getSelection,
   $isRangeSelection,
   COMMAND_PRIORITY_EDITOR,
+  configExtension,
   createCommand,
   defineExtension,
+  registerEventListener,
   RootNode,
   type LexicalCommand,
   type LexicalEditor,
@@ -29,6 +32,7 @@ import {
   $isFootnoteSectionNode,
   FootnoteSectionNode,
 } from './FootnoteSectionNode';
+import {FootnoteImportRules} from './htmlImport';
 import {createFootnoteId} from './state';
 
 export const INSERT_FOOTNOTE_COMMAND: LexicalCommand<void> =
@@ -240,6 +244,12 @@ function $rootTransform(node: RootNode): void {
 }
 
 export const FootnoteExtension = defineExtension({
+  dependencies: [
+    CoreImportExtension,
+    /* @__PURE__ */ configExtension(DOMImportExtension, {
+      rules: FootnoteImportRules,
+    }),
+  ],
   build: (editor: LexicalEditor) => {
     const numbers = signal<ReadonlyMap<string, number>>(new Map());
     return {
@@ -261,7 +271,32 @@ export const FootnoteExtension = defineExtension({
         output.numbers.value = next;
       }
     };
+    const onRootClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      const backref = target.closest('[data-lexical-footnote-backref]');
+      if (!backref) {
+        return;
+      }
+      const footnoteId = backref
+        .closest('[data-lexical-footnote-def]')
+        ?.getAttribute('data-lexical-footnote-def');
+      if (footnoteId) {
+        event.preventDefault();
+        output.gotoRef(footnoteId);
+      }
+    };
+    let removeRootClick: (() => void) | null = null;
     return mergeRegister(
+      () => removeRootClick?.(),
+      editor.registerRootListener(rootElement => {
+        removeRootClick?.();
+        removeRootClick = rootElement
+          ? registerEventListener(rootElement, 'click', onRootClick)
+          : null;
+      }),
       editor.registerCommand(
         INSERT_FOOTNOTE_COMMAND,
         () => {

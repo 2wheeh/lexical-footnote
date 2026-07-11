@@ -36,6 +36,7 @@
   "license": "MIT",
   "peerDependencies": {
     "@lexical/extension": "~0.47.0",
+    "@lexical/html": "~0.47.0",
     "@lexical/react": "~0.47.0",
     "@lexical/utils": "~0.47.0",
     "lexical": "~0.47.0",
@@ -45,6 +46,7 @@
   "devDependencies": {
     "@lexical/extension": "0.47.0",
     "@lexical/history": "0.47.0",
+    "@lexical/html": "0.47.0",
     "@lexical/react": "0.47.0",
     "@lexical/rich-text": "0.47.0",
     "@lexical/utils": "0.47.0",

@@ -21,4 +21,5 @@ export {
   $isFootnoteSectionNode,
   FootnoteSectionNode,
 } from './FootnoteSectionNode';
+export {FootnoteImportRules} from './htmlImport';
 export {createFootnoteId, footnoteIdState} from './state';

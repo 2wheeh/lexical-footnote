@@ -7,13 +7,14 @@ import {
   $create,
   $getState,
   $setState,
+  type DOMExportOutput,
   type EditorConfig,
   type LexicalNode,
   type StateConfigValue,
   type StateValueOrUpdater,
 } from 'lexical';
 
-import {FootnoteExtension} from './FootnoteExtension';
+import {$computeFootnoteNumbers, FootnoteExtension} from './FootnoteExtension';
 import {footnoteIdState} from './state';
 
 /**
@@ -54,6 +55,20 @@ export class FootnoteRefNode extends DecoratorTextNode {
 
   updateDOM(): false {
     return false;
+  }
+
+  /** GFM-style HTML: `<sup><a href="#fn-id" id="fnref-id" data-footnote-ref>n</a></sup>` */
+  exportDOM(): DOMExportOutput {
+    const id = this.getFootnoteId();
+    const number = $computeFootnoteNumbers().get(id);
+    const sup = document.createElement('sup');
+    const anchor = document.createElement('a');
+    anchor.setAttribute('href', `#fn-${id}`);
+    anchor.setAttribute('id', `fnref-${id}`);
+    anchor.setAttribute('data-footnote-ref', 'true');
+    anchor.textContent = String(number ?? '?');
+    sup.appendChild(anchor);
+    return {element: sup};
   }
 
   decorate(): JSX.Element {
