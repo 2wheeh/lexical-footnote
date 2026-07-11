@@ -62,6 +62,25 @@ body {
   padding: 1rem;
 }
 
+.editor-strikethrough {
+  text-decoration: line-through;
+}
+
+.editor-underline {
+  text-decoration: underline;
+}
+
+.editor-underline-strikethrough {
+  text-decoration: underline line-through;
+}
+
+.editor-quote {
+  border-left: 3px solid #d3d5e0;
+  color: #555;
+  margin: 0 0 0.75rem;
+  padding-left: 1rem;
+}
+
 /* Cue: plain superscript number, tiptap/Word style */
 .lexical-footnote__ref button {
   background: none;

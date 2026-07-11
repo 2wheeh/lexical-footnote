@@ -7,6 +7,8 @@ import {
   $convertToMarkdownString,
   MdastCommonMarkExtension,
   MdastExportExtension,
+  MdastGfmExtension,
+  MdastShortcutsExtension,
 } from '@lexical/mdast';
 import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
 import {TreeViewExtension} from '@lexical/react/TreeViewExtension';
@@ -19,11 +21,23 @@ import {defineExtension} from 'lexical';
 import {FootnoteExtension} from '../src';
 import {FootnoteMdastExtension} from '../src/mdast';
 
-const SAMPLE = `Footnotes work like GFM[^gfm], with in-page links[^links].
+const SAMPLE = `# lexical-footnote
 
-[^gfm]: One definition per identifier, numbered by reference order.
+A **GFM footnote** extension for [Lexical](https://lexical.dev), built on
+\`@lexical/extension\` and \`@lexical/mdast\`[^mdast].
 
-[^links]: Click a cue to jump to its definition, and ↩ to jump back.
+## Why footnotes?
+
+- Definitions live *in the document* — markdown round-trips exactly[^model]
+- Numbers are computed from reference order, never stored
+- ~~External store~~ No sync machinery: history and copy/paste come free
+
+> Try it: type \`[^note]\` anywhere, or markdown like \`# \`, \`**bold**\`,
+> \`- \` lists — shortcuts materialize as you type.
+
+[^mdast]: The first external consumer of the experimental mdast pipeline.
+
+[^model]: One definition per identifier, ordered by first reference (GFM).
 `;
 
 const appExtension = defineExtension({
@@ -33,12 +47,22 @@ const appExtension = defineExtension({
     HistoryExtension,
     TreeViewExtension,
     MdastCommonMarkExtension,
+    MdastGfmExtension,
+    MdastShortcutsExtension,
     MdastExportExtension,
     FootnoteExtension,
     FootnoteMdastExtension,
   ],
   name: 'lexical-footnote/dev',
   namespace: 'lexical-footnote-dev',
+  theme: {
+    quote: 'editor-quote',
+    text: {
+      strikethrough: 'editor-strikethrough',
+      underline: 'editor-underline',
+      underlineStrikethrough: 'editor-underline-strikethrough',
+    },
+  },
 });
 
 function Toolbar() {
