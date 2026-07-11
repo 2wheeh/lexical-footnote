@@ -84,14 +84,17 @@ body {
   width: 1px;
 }
 
-.lexical-footnote__backref:focus {
-  clip-path: none;
-  color: #6366f1;
-  cursor: pointer;
-  height: auto;
+/* Focus on the hidden button is projected onto the visible pseudo ↩ —
+   the button itself never becomes visible */
+.lexical-footnote__definition:has(> .lexical-footnote__backref:focus)
+  .lexical-footnote__definition-content::after,
+.lexical-footnote__definition:has(> .lexical-footnote__backref:focus)
+  .lexical-footnote__definition-content
+  > p:nth-last-child(2):has(+ p:last-child > br:only-child)::after {
+  background: #6366f1;
+  border-radius: 3px;
+  color: #fff;
   outline: 2px solid #6366f1;
-  outline-offset: 2px;
-  width: auto;
 }
 
 .lexical-footnote__definition::marker {
