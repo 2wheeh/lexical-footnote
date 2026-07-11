@@ -4,6 +4,7 @@ import {
 } from '@lexical/extension';
 import {$generateHtmlFromNodes} from '@lexical/html';
 import {
+  $convertFromMarkdownString,
   $convertToMarkdownString,
   MdastCommonMarkExtension,
   MdastExportExtension,
@@ -24,6 +25,7 @@ import {
   $getFootnoteDefinition,
   $getFootnoteSection,
   $getOrderedFootnoteIds,
+  $removeFootnoteDefinition,
   FootnoteExtension,
 } from './FootnoteExtension';
 import {$createFootnoteRefNode} from './FootnoteRefNode';
@@ -145,6 +147,26 @@ describe('a cue inside a note', () => {
     expect(markdown).toContain('[^c]:');
   });
 
+  it('reads a nested cue back in from markdown', () => {
+    editor.update(
+      () =>
+        $convertFromMarkdownString(
+          ['body[^a]', '', '[^a]: see [^c]', '', '[^c]: note c'].join('\n'),
+        ),
+      {discrete: true},
+    );
+
+    editor.read(() => {
+      // c is cited from inside a, and nowhere else — it still gets a number,
+      // right after the note that cites it.
+      expect([...$computeFootnoteNumbers()]).toEqual([
+        ['a', 1],
+        ['c', 2],
+      ]);
+      expect($getFootnoteDefinition('c')?.getTextContent()).toBe('note c');
+    });
+  });
+
   it('numbers cues inside an orphan note, which GitHub never has to', () => {
     editor.update(() => $body('a'), {discrete: true});
     editor.update(
@@ -176,6 +198,27 @@ describe('a cue inside a note', () => {
       expect(numbers.has('z')).toBe(false);
       expect($getOrderedFootnoteIds()).toEqual(['a', 'w', 'z']);
     });
+  });
+
+  it('orphans the note it cited when the citing note is deleted', () => {
+    editor.update(() => $body('a'), {discrete: true});
+    editor.update(() => $writeNote('a', 'see ', 'c'), {discrete: true});
+    editor.update(() => $writeNote('c', 'note c'), {discrete: true});
+
+    // Deleting note a takes the cue inside it — the only one pointing at c.
+    editor.update(() => $removeFootnoteDefinition('a'), {discrete: true});
+
+    editor.read(() => {
+      expect($getFootnoteDefinition('a')).toBeNull();
+      // c survives, orphaned and unnumbered, with its text: the same policy
+      // as any cue deletion, so it stays recoverable and cleanup is what
+      // finally discards it.
+      expect($getFootnoteDefinition('c')?.getTextContent()).toBe('note c');
+      expect($computeFootnoteNumbers().has('c')).toBe(false);
+    });
+
+    editor.update(() => $cleanupOrphanFootnotes(), {discrete: true});
+    editor.read(() => expect($getOrderedFootnoteIds()).toEqual([]));
   });
 
   it('keeps a note that only a nested cue refers to, on cleanup', () => {

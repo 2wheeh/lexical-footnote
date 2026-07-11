@@ -325,6 +325,8 @@ function $sectionTransform(node: FootnoteSectionNode): void {
     node.remove();
     return;
   }
+  // A section that ended up nested inside another block ($rootTransform only
+  // looks among the root's own children, so it would never find it again).
   if (node.getParent() !== root) {
     root.append(node);
     return;
@@ -332,14 +334,16 @@ function $sectionTransform(node: FootnoteSectionNode): void {
   // isEmpty() is slot-aware: true only when it holds no definitions either.
   if (node.isEmpty()) {
     node.remove();
-    return;
   }
-  if (root.getLastChild() !== node) {
-    root.append(node);
-  }
+  // Pinning it last is $rootTransform's job — content arriving after it
+  // dirties the root, which is what has to trigger the move.
 }
 
-/** Keep the section pinned as the last child of the root. */
+/**
+ * The section is the last block of the document. Lives on the RootNode rather
+ * than the section, because what puts it out of place is content arriving
+ * *after* it — which dirties the root, not the section.
+ */
 function $rootTransform(node: RootNode): void {
   const section = $getFootnoteSection();
   if (section && node.getLastChild() !== section) {

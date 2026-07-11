@@ -14,23 +14,33 @@ navigation, GFM-compatible HTML export/import, and markdown round-trip via
 
 | Node | Kind | Role |
 |---|---|---|
-| `FootnoteRefNode` | inline `DecoratorTextNode` | the superscript cue in the body |
-| `FootnoteSectionNode` | `ElementNode` | definitions container, pinned as the last block |
+| `FootnoteRefNode` | inline `DecoratorTextNode` | the superscript cue — in the body, or inside another note |
+| `FootnoteSectionNode` | `ElementNode` | hosts the definitions in named slots, pinned as the last block |
 | `FootnoteDefinitionNode` | `ElementNode` | one footnote's flow content |
 
 Design principles:
 
-- **In-document definitions.** Definitions are real nodes at the end of the
-  document (mapping 1:1 to mdast `footnoteDefinition`), not an external
-  store — history, serialization, and copy/paste come for free.
-- **Derived numbering.** Display numbers are never stored. They're computed
-  from the document order of first references (GFM numbering) and exposed as
-  a signal; reordering refs renumbers cues reactively without touching the
-  document.
+- **In-document definitions.** Definitions are real nodes (mapping 1:1 to
+  mdast `footnoteDefinition`), not an external store — history,
+  serialization, and copy/paste come for free.
+- **The slot map is the definition map.** GFM keys definitions by
+  identifier, and so does the model: each definition is a named slot
+  (`fn:<id>`) on the section, not a child of it. "One definition per
+  identifier" is therefore structural rather than a transform that has to
+  keep cleaning up after the user, and there is no stored order to keep
+  correct — so reordering the body no longer mutates the document at all.
+  The section itself stays an ordinary root child, which is what keeps it
+  reachable by the HTML and mdast exporters.
+- **Derived numbering.** Display numbers are never stored. They follow GFM:
+  the body's cues first, then whatever the notes themselves cite, in the
+  order the notes are read. Exposed as a signal, recomputed each commit.
 - **Self-healing invariants** via node transforms: one section, pinned last;
-  definitions live in the section, ordered by reference order, deduped by
-  id; a dangling ref heals an empty definition; orphan definitions are kept
-  (GFM keeps unreferenced definitions).
+  a dangling cue heals an empty definition; deleting a note deletes its cues;
+  orphan definitions are kept (GFM keeps unreferenced definitions).
+
+Each definition renders as an editable island — a slot container inside its
+own `<li>` — so a note can be edited in place while remaining structurally
+separate from the body: no selection can straddle the boundary between them.
 
 ## Usage
 
