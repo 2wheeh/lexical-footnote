@@ -15,8 +15,8 @@ import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {
   $getFootnoteDefinition,
   FootnoteExtension,
-} from '../FootnoteExtension';
-import {$createFootnoteRefNode, FootnoteRefNode} from '../nodes/FootnoteRefNode';
+} from '../../FootnoteExtension';
+import {$createFootnoteRefNode, FootnoteRefNode} from '../../nodes/FootnoteRefNode';
 
 /**
  * A footnote may be cited more than once: GFM keys definitions by identifier,

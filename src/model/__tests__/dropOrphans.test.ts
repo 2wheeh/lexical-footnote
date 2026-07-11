@@ -17,11 +17,11 @@ import {
 } from 'lexical';
 import {afterEach, describe, expect, it} from 'vitest';
 
-import {$createFootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
-import {$getFootnoteSection, FootnoteExtension} from '../FootnoteExtension';
-import {$createFootnoteRefNode} from '../nodes/FootnoteRefNode';
-import {FootnoteMdastExtension} from '../mdast';
-import {$setDefinitionSlot} from './slots';
+import {$createFootnoteDefinitionNode} from '../../nodes/FootnoteDefinitionNode';
+import {$getFootnoteSection, FootnoteExtension} from '../../FootnoteExtension';
+import {$createFootnoteRefNode} from '../../nodes/FootnoteRefNode';
+import {FootnoteMdastExtension} from '../../mdast';
+import {$setDefinitionSlot} from '../slots';
 
 /**
  * `dropOrphansOnExport` — GitHub leaves a definition nothing refers to out of

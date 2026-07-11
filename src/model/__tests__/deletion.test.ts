@@ -17,16 +17,16 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {$createFootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
+import {$createFootnoteDefinitionNode} from '../../nodes/FootnoteDefinitionNode';
 import {
   $cleanupOrphanFootnotes,
   $getFootnoteDefinition,
   $getFootnoteSection,
   $getOrderedFootnoteIds,
   FootnoteExtension,
-} from '../FootnoteExtension';
-import {$createFootnoteRefNode, FootnoteRefNode} from '../nodes/FootnoteRefNode';
-import {$setDefinitionSlot} from './slots';
+} from '../../FootnoteExtension';
+import {$createFootnoteRefNode, FootnoteRefNode} from '../../nodes/FootnoteRefNode';
+import {$setDefinitionSlot} from '../slots';
 
 /**
  * Deleting a footnote. Definitions are slot values on the section: they have

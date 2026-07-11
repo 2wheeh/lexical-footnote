@@ -3,3 +3,6 @@ dist/
 .omc/
 *.log
 .DS_Store
+
+# vitest browser mode failure artifacts
+__screenshots__/

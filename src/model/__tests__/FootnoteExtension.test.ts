@@ -11,16 +11,16 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {$createFootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
+import {$createFootnoteDefinitionNode} from '../../nodes/FootnoteDefinitionNode';
 import {
   $getFootnoteDefinition,
   $getFootnoteDefinitions,
   $getFootnoteSection,
   FootnoteExtension,
   INSERT_FOOTNOTE_COMMAND,
-} from '../FootnoteExtension';
-import {$createFootnoteRefNode, $isFootnoteRefNode} from '../nodes/FootnoteRefNode';
-import {$isFootnoteSectionNode} from '../nodes/FootnoteSectionNode';
+} from '../../FootnoteExtension';
+import {$createFootnoteRefNode, $isFootnoteRefNode} from '../../nodes/FootnoteRefNode';
+import {$isFootnoteSectionNode} from '../../nodes/FootnoteSectionNode';
 
 describe('FootnoteExtension', () => {
   let editor: LexicalEditorWithDispose;
