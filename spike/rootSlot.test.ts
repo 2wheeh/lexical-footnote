@@ -6,7 +6,10 @@ import {
   $createParagraphNode,
   $createTextNode,
   $getRoot,
+  $getSelection,
   $getSlot,
+  $isRangeSelection,
+  $selectAll,
   $setSlot,
   defineExtension,
   ElementNode,
@@ -78,6 +81,28 @@ describe('a slot on the RootNode', () => {
       // reads *above* the body in plain text, which is backwards.
       expect($getRoot().getTextContent()).toBe('slotted notebody');
     });
+    editor.dispose();
+  });
+
+  it('is unreachable by the selection — so plain-text copy loses it', () => {
+    const editor = build();
+    seed(editor);
+    let selected = '';
+    editor.update(
+      () => {
+        $selectAll();
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          selected = selection.getTextContent();
+        }
+      },
+      {discrete: true},
+    );
+
+    // Select-all walks the children spine, which a root slot is not part of.
+    // The text/plain flavour of a copy is built from exactly this, so the notes
+    // are not merely reordered — they are absent.
+    expect(selected).toBe('body');
     editor.dispose();
   });
 
