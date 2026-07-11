@@ -12,9 +12,12 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {$isFootnoteDefinitionNode} from './FootnoteDefinitionNode';
-import {$getFootnoteSection, FootnoteExtension} from './FootnoteExtension';
-import {$createFootnoteRefNode, $isFootnoteRefNode} from './FootnoteRefNode';
+import {
+  $getFootnoteDefinitions,
+  $getFootnoteSection,
+  FootnoteExtension,
+} from '../../FootnoteExtension';
+import {$createFootnoteRefNode, $isFootnoteRefNode} from '../../nodes/FootnoteRefNode';
 
 describe('HTML round-trip', () => {
   let editor: LexicalEditorWithDispose;
@@ -42,9 +45,7 @@ describe('HTML round-trip', () => {
   function fillDefinition(text: string): void {
     editor.update(
       () => {
-        const def = $getFootnoteSection()!
-          .getChildren()
-          .filter($isFootnoteDefinitionNode)[0]!;
+        const def = $getFootnoteDefinitions()[0]!;
         const para = def.getFirstChild();
         if ($isParagraphNode(para)) {
           para.append($createTextNode(text));
@@ -102,7 +103,7 @@ describe('HTML round-trip', () => {
 
       const section = $getFootnoteSection();
       expect(section).not.toBeNull();
-      const defs = section!.getChildren().filter($isFootnoteDefinitionNode);
+      const defs = $getFootnoteDefinitions();
       expect(defs).toHaveLength(1);
       expect(defs[0]!.getFootnoteId()).toBe('n1');
       expect(defs[0]!.getTextContent()).toContain('roundtrip note');
@@ -133,7 +134,7 @@ describe('HTML round-trip', () => {
     editor.read(() => {
       const section = $getFootnoteSection();
       expect(section).not.toBeNull();
-      const defs = section!.getChildren().filter($isFootnoteDefinitionNode);
+      const defs = $getFootnoteDefinitions();
       expect(defs).toHaveLength(1);
       expect(defs[0]!.getFootnoteId()).toBe('note1');
       expect(defs[0]!.getTextContent()).toContain('gh note');

@@ -58,13 +58,19 @@ body {
   padding: 0.75rem;
 }
 
-/* The root editor only — decorators/backrefs carry contenteditable="false" */
-[contenteditable='true'] {
+/* The root editor only. NOT [contenteditable='true']: each definition is an
+   editable slot island and carries that attribute too, so the frame and the
+   min-height would be drawn around every note. */
+[data-lexical-editor='true'] {
   border: 1px solid #ccc;
   border-radius: 8px;
   min-height: 10rem;
   outline: none;
   padding: 1rem;
+}
+
+[data-lexical-slot] {
+  outline: none;
 }
 
 .editor-strikethrough {
@@ -121,6 +127,24 @@ body {
   width: 8rem;
 }
 
+/* The <li>s sit in slot-map (code-unit) order; the extension projects the
+   derived footnote order onto them via `order` and `value`. */
+[data-lexical-footnote-list] {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.lexical-footnote__item {
+  list-style: decimal;
+}
+
+.lexical-footnote__item::marker {
+  color: #6366f1;
+  font-weight: 600;
+}
+
 .lexical-footnote__definition {
   margin-bottom: 0.375rem;
 }
@@ -133,6 +157,14 @@ body {
   z-index: 1;
 }
 
+/* A note cited N times gets N backrefs — one per cue — laid out as a run at
+   the end of the note's last line. Only the run is positioned. */
+.lexical-footnote__backrefs {
+  display: inline-flex;
+  gap: 0.25em;
+  position: absolute;
+}
+
 .lexical-footnote__backref {
   background: none;
   border: none;
@@ -141,7 +173,10 @@ body {
   font-size: 0.8125em;
   padding: 0;
   pointer-events: auto;
-  position: absolute;
+}
+
+.lexical-footnote__backref sup {
+  font-size: 0.75em;
 }
 
 .lexical-footnote__backref:hover {
@@ -160,8 +195,12 @@ body {
   font-weight: 600;
 }
 
-.lexical-footnote__definition-content > p {
+.lexical-footnote__definition > p {
   margin: 0 0 0.25rem;
+}
+
+.lexical-footnote__definition > p:last-child {
+  margin-bottom: 0;
 }
 
 .lexical-footnote__ref--selected button {

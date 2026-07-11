@@ -7,10 +7,9 @@ import {
   sel,
 } from '@lexical/html';
 
-import {$createFootnoteDefinitionNode} from './FootnoteDefinitionNode';
-import {$createFootnoteRefNode} from './FootnoteRefNode';
-import {$createFootnoteSectionNode} from './FootnoteSectionNode';
-import {createFootnoteId} from './state';
+import {$createFootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
+import {$createFootnoteRefNode} from '../nodes/FootnoteRefNode';
+import {createFootnoteId} from '../model/state';
 
 /**
  * `fn-<id>` from our own exportDOM, or GitHub's `user-content-fn-<id>`.
@@ -116,6 +115,11 @@ const FootnoteDefinitionImportRule = /* @__PURE__ */ defineImportRule({
   name: 'lexical-footnote/definition',
 });
 
+/**
+ * Yields the definitions themselves rather than a section node: definitions
+ * are slot values, and $defTransform slots each one onto the (single)
+ * section on commit, wherever the source put it.
+ */
 const FootnoteSectionImportRule = /* @__PURE__ */ defineImportRule({
   $import: (ctx, el, $next) => {
     if (el.getAttribute('data-footnotes') === null) {
@@ -123,9 +127,7 @@ const FootnoteSectionImportRule = /* @__PURE__ */ defineImportRule({
     }
     const list =
       Array.from(el.children).find(child => child.tagName === 'OL') ?? el;
-    const section = $createFootnoteSectionNode();
-    section.splice(0, 0, ctx.$importChildren(list));
-    return [section];
+    return ctx.$importChildren(list);
   },
   match: sel.tag('section'),
   name: 'lexical-footnote/section',

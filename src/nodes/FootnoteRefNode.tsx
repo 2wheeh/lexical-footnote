@@ -15,8 +15,10 @@ import {
   type StateValueOrUpdater,
 } from 'lexical';
 
-import {$computeFootnoteNumbers, FootnoteExtension} from './FootnoteExtension';
-import {footnoteIdState} from './state';
+import {FootnoteExtension} from '../FootnoteExtension';
+import {backrefTargetId, FOOTNOTE_LABEL_ID} from '../io/gfm';
+import {$computeFootnoteNumbers, $getFootnoteRefs} from '../model/numbering';
+import {footnoteIdState} from '../model/state';
 
 /**
  * The inline footnote cue (`[^id]` in GFM), rendered as a superscript
@@ -58,15 +60,26 @@ export class FootnoteRefNode extends DecoratorTextNode {
     return false;
   }
 
-  /** GFM-style HTML: `<sup><a href="#fn-id" id="fnref-id" data-footnote-ref>n</a></sup>` */
+  /**
+   * GFM-style HTML: `<sup><a href="#fn-id" id="fnref-id" data-footnote-ref>n</a></sup>`.
+   *
+   * A note can be cited more than once, and every cue needs an id of its own
+   * for its backref to land on — so the second and later cues for the same id
+   * are suffixed (`fnref-id-2`), exactly as GitHub does it. Without the
+   * suffix, repeat cues would all carry the same DOM id.
+   */
   exportDOM(): DOMExportOutput {
     const id = this.getFootnoteId();
     const number = $computeFootnoteNumbers().get(id);
+    const occurrence = $getFootnoteRefs(id).indexOf(this) + 1;
     const sup = document.createElement('sup');
     const anchor = document.createElement('a');
     anchor.setAttribute('href', `#fn-${id}`);
-    anchor.setAttribute('id', `fnref-${id}`);
-    anchor.setAttribute('data-footnote-ref', 'true');
+    anchor.setAttribute('id', backrefTargetId(id, occurrence));
+    anchor.setAttribute('data-footnote-ref', '');
+    // Names the bare number for a screen reader; the section exports the
+    // element this points at.
+    anchor.setAttribute('aria-describedby', FOOTNOTE_LABEL_ID);
     anchor.textContent = String(number ?? '?');
     sup.appendChild(anchor);
     return {element: sup};

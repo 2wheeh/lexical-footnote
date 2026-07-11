@@ -16,9 +16,9 @@ import {ExtensionComponent} from '@lexical/react/ExtensionComponent';
 import {useExtensionDependency} from '@lexical/react/useExtensionComponent';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {RichTextExtension} from '@lexical/rich-text';
-import {defineExtension} from 'lexical';
+import {configExtension, defineExtension} from 'lexical';
 
-import {FootnoteExtension} from '../src';
+import {$isFootnoteRefNode, FootnoteExtension} from '../src';
 import {FootnoteClipboardExtension} from '../src/clipboard';
 import {FootnoteMdastExtension} from '../src/mdast';
 
@@ -46,7 +46,14 @@ const appExtension = defineExtension({
     RichTextExtension,
     AutoFocusExtension,
     HistoryExtension,
-    TreeViewExtension,
+    // The tree prints NodeState for TextNode and LinkNode only, so a cue
+    // shows up as a bare `footnote-ref` — which id it points at, the thing
+    // you actually want to see next to the definition's `[slot: fn:<id>]`,
+    // is invisible. customPrintNode is the sanctioned way to add it.
+    configExtension(TreeViewExtension, {
+      customPrintNode: node =>
+        $isFootnoteRefNode(node) ? `[^${node.getFootnoteId()}]` : undefined,
+    }),
     MdastCommonMarkExtension,
     MdastGfmExtension,
     MdastShortcutsExtension,
