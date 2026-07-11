@@ -21,42 +21,47 @@ function parseFootnoteId(raw: string, prefix: 'fn' | 'fnref'): string {
   return match?.[1] ?? '';
 }
 
-// Word and Google Docs put footnotes on the clipboard as anchor pairs:
-// a cue linking down to the note (#_ftn1 / #ftnt1) and a backref linking
-// up to the cue (#_ftnref1 / #ftnt_ref1). The `ref` patterns deliberately
-// end at digits so they never match the backrefs.
-const WORD_CUE_HREF = /^#_ftn(\d+)$/;
+// Word and Google Docs put footnotes on the clipboard as anchor pairs: a
+// cue linking down to the note and a backref linking back up to the cue.
+// The cue patterns end at digits, so they can never match the backrefs
+// (#_ftnref1 / #ftnt_ref1).
+const CUE_PATTERNS = [
+  {href: /^#_ftn(\d+)$/, source: 'word'},
+  {href: /^#ftnt(\d+)$/, source: 'gdocs'},
+] as const;
 const WORD_DEF_ID = /^ftn(\d+)$/;
-const GDOCS_CUE_HREF = /^#ftnt(\d+)$/;
 const GDOCS_DEF_ANCHOR_ID = /^ftnt(\d+)$/;
 const IMPORTED_BACKREF_HREF = /^#(?:_ftnref|ftnt_ref)\d+$/;
 
 /**
- * Source-number → generated id, per import pass. Word/Docs number their
- * footnotes 1..n, which would collide with footnotes already in the
- * document (or with a second paste), so each pasted footnote gets a fresh
- * id — this map keeps its cue and definition on the same one.
+ * Source-number → generated id, one map per import pass. Word/Docs number
+ * their footnotes 1..n, which would collide with footnotes already in the
+ * document (or with an earlier paste), so every pasted footnote gets a
+ * fresh id; the map only pairs a cue with its definition within the same
+ * paste. The default is null — a Map default would be evaluated once and
+ * shared across all sessions (context-state defaults are single
+ * instances), silently merging repeated pastes.
  */
-const importedFootnoteIds = /* @__PURE__ */ createImportState(
-  'lexical-footnote/importedIds',
-  () => new Map<string, string>(),
-);
+const importedFootnoteIds = /* @__PURE__ */ createImportState<Map<
+  string,
+  string
+> | null>('lexical-footnote/importedIds', () => null);
 
 function resolveImportedId(ctx: DOMImportContext, sourceKey: string): string {
-  const ids = ctx.session.get(importedFootnoteIds);
-  // The default value is produced fresh per read; store it so later rules
-  // in this pass see the same map.
-  ctx.session.set(importedFootnoteIds, ids);
-  const existing = ids.get(sourceKey);
-  if (existing) {
-    return existing;
+  let ids = ctx.session.get(importedFootnoteIds);
+  if (!ids) {
+    ids = new Map();
+    ctx.session.set(importedFootnoteIds, ids);
   }
-  const id = createFootnoteId();
-  ids.set(sourceKey, id);
+  let id = ids.get(sourceKey);
+  if (!id) {
+    id = createFootnoteId();
+    ids.set(sourceKey, id);
+  }
   return id;
 }
 
-/** The `[1]` anchor Word/Docs put at the start of the note's text. */
+/** Drops the literal `[1]` anchors Word/Docs put at the start of a note. */
 function stripImportedBackrefs(el: Element): void {
   for (const anchor of Array.from(el.querySelectorAll('a[href]'))) {
     if (IMPORTED_BACKREF_HREF.test(anchor.getAttribute('href') ?? '')) {
@@ -72,15 +77,15 @@ const FootnoteRefImportRule = /* @__PURE__ */ defineImportRule({
       const id = parseFootnoteId(href.replace(/^.*#/, ''), 'fn');
       return id ? [$createFootnoteRefNode(id)] : $next();
     }
-    const word = WORD_CUE_HREF.exec(href);
-    if (word) {
-      return [$createFootnoteRefNode(resolveImportedId(ctx, `word:${word[1]}`))];
-    }
-    const gdocs = GDOCS_CUE_HREF.exec(href);
-    if (gdocs) {
-      return [
-        $createFootnoteRefNode(resolveImportedId(ctx, `gdocs:${gdocs[1]}`)),
-      ];
+    for (const {href: pattern, source} of CUE_PATTERNS) {
+      const match = pattern.exec(href);
+      if (match) {
+        return [
+          $createFootnoteRefNode(
+            resolveImportedId(ctx, `${source}:${match[1]}`),
+          ),
+        ];
+      }
     }
     return $next();
   },
@@ -97,7 +102,6 @@ const FootnoteDefinitionImportRule = /* @__PURE__ */ defineImportRule({
     if (!id) {
       return $next();
     }
-    stripImportedBackrefs(el);
     for (const backref of Array.from(
       el.querySelectorAll('[data-footnote-backref]'),
     )) {
@@ -126,11 +130,20 @@ const FootnoteSectionImportRule = /* @__PURE__ */ defineImportRule({
   name: 'lexical-footnote/section',
 });
 
-/** Word: `<div style="mso-element:footnote" id="ftn1"><p>…</p></div>` */
+/**
+ * Word: `<div style="mso-element:footnote" id="ftn1"><p>…</p></div>`.
+ * The id alone (`ftn1`) is too generic for arbitrary web pages, so a Word
+ * marker — the mso-element style or an MsoFootnoteText paragraph — is
+ * required as well.
+ */
 const WordDefinitionImportRule = /* @__PURE__ */ defineImportRule({
   $import: (ctx, el, $next) => {
     const match = WORD_DEF_ID.exec(el.id ?? '');
-    if (!match) {
+    const isWordFootnote =
+      match !== null &&
+      (/mso-element:\s*footnote/.test(el.getAttribute('style') ?? '') ||
+        el.querySelector('.MsoFootnoteText') !== null);
+    if (!isWordFootnote) {
       return $next();
     }
     stripImportedBackrefs(el);
@@ -147,6 +160,7 @@ const WordDefinitionImportRule = /* @__PURE__ */ defineImportRule({
 /**
  * Google Docs: `<p><a href="#ftnt_ref1" id="ftnt1">[1]</a> …</p>` — the
  * note is identified by its leading anchor, not by a container attribute.
+ * (Body cues carry `id="ftnt_ref1"`, which the pattern rejects.)
  */
 const GoogleDocsDefinitionImportRule = /* @__PURE__ */ defineImportRule({
   $import: (ctx, el, $next) => {

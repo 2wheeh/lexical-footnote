@@ -116,6 +116,17 @@ describe('word/google-docs clipboard import', () => {
     expect(defText).not.toContain('[1]');
   });
 
+  it('duplicates footnotes when the same content is pasted twice', () => {
+    pasteHtml(WORD_HTML);
+    pasteHtml(WORD_HTML, true);
+
+    const {refIds, defIds} = readImported();
+    expect(refIds).toHaveLength(2);
+    // two import passes must not share generated ids
+    expect(new Set(refIds).size).toBe(2);
+    expect(defIds).toHaveLength(2);
+  });
+
   it('assigns fresh ids so a paste cannot collide with existing footnotes', () => {
     editor.update(
       () => {
