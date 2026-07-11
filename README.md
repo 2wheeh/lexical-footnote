@@ -150,9 +150,16 @@ in the source, and only its HTML rendering discards it.
   alone.
 - Backspace/delete at a cue boundary selects the cue first instead of
   deleting it outright (Word/Notion behavior); a second delete removes it.
-- Multiple refs to one id are valid (GFM) and share a number. This differs
-  from tiptap/Word, which duplicate the footnote on paste — GFM semantics
-  keep markdown round-trip exact.
+- Multiple refs to one id are valid (GFM) and share a number, and the note
+  gets a backref per cue. This differs from tiptap/Word, which duplicate the
+  footnote on paste — GFM semantics keep markdown round-trip exact.
+- A note may cite another note. Numbering follows GFM: the body first, then
+  whatever the notes cite, in the order the notes are read — so a note
+  reachable only from inside another one is numbered right after it. Cycles
+  and self-citation terminate.
+- Arrow keys move between notes. The extension does this itself in every
+  browser: each note is an editable island, and Firefox will not carry the
+  caret across one.
 - The definitions section is pinned to the end of the document; content
   typed after it is moved above it.
 

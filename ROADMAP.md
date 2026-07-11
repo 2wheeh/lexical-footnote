@@ -44,10 +44,14 @@ prioritized.
   preserving authored labels.
 - [ ] Plain-text copy of a cue exposes the raw id — derive something
   readable.
-- [ ] Nested footnotes (refs inside definitions) and rich definition content
-  (lists, code blocks) — exercise HTML/mdast round-trips. Note that a cue
-  inside a note is invisible to the numbering walk today: definitions are
-  slot values, and `$dfs` does not descend into slots.
+- [x] **Nested footnotes** (a cue inside a note) — numbering follows GFM's
+  growing loop: the body first, then whatever the notes cite, in the order the
+  notes are read, so a note reachable only from inside another is numbered
+  right after it. Cycles and self-citation terminate. Cues inside *orphan*
+  notes are numbered too, which GitHub never has to do (it drops orphans);
+  we keep them, and a visible note whose cue rendered as `?` would look broken.
+- [ ] Rich definition content (lists, code blocks) — exercise HTML/mdast
+  round-trips.
 
 ## Collaboration & presentation
 

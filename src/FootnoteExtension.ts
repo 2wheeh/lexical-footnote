@@ -45,6 +45,7 @@ import {
 } from './FootnoteRefNode';
 import {
   $createFootnoteSectionNode,
+  $getFootnoteSection,
   $isFootnoteSectionNode,
   FootnoteSectionNode,
   FootnoteSectionRenderOverride,
@@ -67,18 +68,10 @@ import {
 import {createFootnoteId} from './state';
 
 export {$computeFootnoteNumbers} from './numbering';
+export {$getFootnoteSection} from './FootnoteSectionNode';
 
 export const INSERT_FOOTNOTE_COMMAND: LexicalCommand<void> =
   /* @__PURE__ */ createCommand('INSERT_FOOTNOTE_COMMAND');
-
-export function $getFootnoteSection(): FootnoteSectionNode | null {
-  for (const child of $getRoot().getChildren()) {
-    if ($isFootnoteSectionNode(child)) {
-      return child;
-    }
-  }
-  return null;
-}
 
 function $ensureFootnoteSection(): FootnoteSectionNode {
   const existing = $getFootnoteSection();

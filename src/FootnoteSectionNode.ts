@@ -2,6 +2,7 @@ import {$getPeerDependency} from '@lexical/extension';
 import {$appendNodeToHTML, domOverride} from '@lexical/html';
 import {
   $create,
+  $getRoot,
   ElementNode,
   type DOMExportOutput,
   type EditorConfig,
@@ -151,6 +152,20 @@ export const FootnoteSectionRenderOverride = /* @__PURE__ */ domOverride(
 
 export function $createFootnoteSectionNode(): FootnoteSectionNode {
   return $create(FootnoteSectionNode);
+}
+
+/**
+ * Lives here rather than in the extension so that `numbering.ts` can reach the
+ * definitions — a cue may sit inside a note, and the numbering has to walk
+ * into them — without importing the extension and closing a module cycle.
+ */
+export function $getFootnoteSection(): FootnoteSectionNode | null {
+  for (const child of $getRoot().getChildren()) {
+    if ($isFootnoteSectionNode(child)) {
+      return child;
+    }
+  }
+  return null;
 }
 
 export function $isFootnoteSectionNode(
