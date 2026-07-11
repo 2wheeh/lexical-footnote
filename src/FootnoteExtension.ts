@@ -49,8 +49,13 @@ import {
   FootnoteSectionNode,
   FootnoteSectionRenderOverride,
 } from './FootnoteSectionNode';
+import {backrefLabel} from './gfm';
 import {FootnoteImportRules} from './htmlImport';
-import {$computeFootnoteNumbers, orderFootnoteIds} from './numbering';
+import {
+  $computeFootnoteNumbers,
+  $getFootnoteRefs,
+  orderFootnoteIds,
+} from './numbering';
 import {
   $getDefinitionEntries,
   $getDefinitionSlot,
@@ -92,14 +97,7 @@ export function $getFootnoteDefinition(
 }
 
 export function $getFirstFootnoteRef(footnoteId: string): FootnoteRefNode | null {
-  // Order-sensitive (the FIRST ref), so this walks the body in document
-  // order rather than reading the unordered node map.
-  for (const {node} of $dfs()) {
-    if ($isFootnoteRefNode(node) && node.getFootnoteId() === footnoteId) {
-      return node;
-    }
-  }
-  return null;
+  return $getFootnoteRefs(footnoteId)[0] ?? null;
 }
 
 /** Definition ids in display order (referenced by number, then orphans). */
@@ -243,11 +241,16 @@ function gotoDefinition(editor: LexicalEditor, footnoteId: string): void {
   });
 }
 
-function gotoRef(editor: LexicalEditor, footnoteId: string): void {
+/** `occurrence` is 1-based: a note cited twice has a backref to each cue. */
+function gotoRef(
+  editor: LexicalEditor,
+  footnoteId: string,
+  occurrence = 1,
+): void {
   editor.focus(() => {
     editor.update(
       () => {
-        const ref = $getFirstFootnoteRef(footnoteId);
+        const ref = $getFootnoteRefs(footnoteId)[occurrence - 1];
         if (ref) {
           ref.selectEnd();
           $scrollToKey(editor, ref.getKey());
@@ -484,7 +487,8 @@ export const FootnoteExtension = defineExtension({
       },
       gotoDefinition: (footnoteId: string) =>
         gotoDefinition(editor, footnoteId),
-      gotoRef: (footnoteId: string) => gotoRef(editor, footnoteId),
+      gotoRef: (footnoteId: string, occurrence?: number) =>
+        gotoRef(editor, footnoteId, occurrence),
       insertFootnote: () =>
         editor.dispatchCommand(INSERT_FOOTNOTE_COMMAND, undefined),
       numbers,
@@ -545,7 +549,8 @@ export const FootnoteExtension = defineExtension({
     // click/focus/a11y come for free.
     let overlay: HTMLElement | null = null;
     let currentRoot: HTMLElement | null = null;
-    const backrefButtons = new Map<string, HTMLButtonElement>();
+    // One group per note, holding that note's backrefs — one per cue.
+    const backrefGroups = new Map<string, HTMLElement>();
     const returnToNoteEnd = (footnoteId: string, thenInsert?: string) => {
       editor.focus(() => {
         editor.update(
@@ -607,18 +612,38 @@ export const FootnoteExtension = defineExtension({
         );
       });
     };
-    const createBackrefButton = (footnoteId: string): HTMLButtonElement => {
+    /**
+     * One button per cue, as in GFM: a note cited three times can be left in
+     * three directions, and each backref leads to its own cue. ArrowRight
+     * walks along them before continuing to the next note.
+     */
+    const createBackrefButton = (
+      footnoteId: string,
+      occurrence: number,
+      footnoteNumber: number | string,
+    ): HTMLButtonElement => {
       const button = document.createElement('button');
       button.type = 'button';
       // Roving focus: reached with ArrowRight from the end of a note, not
       // Tab — the editor should be a single tab stop for the page.
       button.tabIndex = -1;
       button.className = 'lexical-footnote__backref';
-      button.setAttribute('aria-label', 'Back to reference');
-      button.textContent = '↩';
+      button.dataset.occurrence = String(occurrence);
+      button.setAttribute('aria-label', backrefLabel(footnoteNumber, occurrence));
+      button.append('↩');
+      if (occurrence > 1) {
+        const sup = document.createElement('sup');
+        sup.textContent = String(occurrence);
+        button.appendChild(sup);
+      }
+      const siblingButton = (step: number): HTMLElement | null => {
+        const next =
+          step > 0 ? button.nextElementSibling : button.previousElementSibling;
+        return next instanceof HTMLElement ? next : null;
+      };
       button.addEventListener('click', event => {
         event.preventDefault();
-        output.gotoRef(footnoteId);
+        output.gotoRef(footnoteId, occurrence);
       });
       button.addEventListener('keydown', event => {
         if (event.metaKey || event.ctrlKey) {
@@ -631,14 +656,23 @@ export const FootnoteExtension = defineExtension({
           (key === 'Enter' || key === ' ')
         ) {
           event.preventDefault();
-          output.gotoRef(footnoteId);
+          output.gotoRef(footnoteId, occurrence);
         } else if (key === 'ArrowLeft' || key === 'Escape') {
           event.preventDefault();
-          returnToNoteEnd(footnoteId);
+          const previous = key === 'ArrowLeft' ? siblingButton(-1) : null;
+          if (previous) {
+            previous.focus();
+          } else {
+            returnToNoteEnd(footnoteId);
+          }
         } else if (key === 'ArrowRight' || key === 'ArrowDown') {
-          // Continue past the backref into the next note.
           event.preventDefault();
-          gotoNextDefinitionStart(footnoteId);
+          const next = key === 'ArrowRight' ? siblingButton(1) : null;
+          if (next) {
+            next.focus();
+          } else {
+            gotoNextDefinitionStart(footnoteId);
+          }
         } else if (key === 'ArrowUp') {
           // Up into the previous note, or the body above the section.
           event.preventDefault();
@@ -683,36 +717,65 @@ export const FootnoteExtension = defineExtension({
         x: rect.left,
       };
     };
+    /**
+     * A backref group per note, holding one button per cue. Structure only —
+     * it runs on commit, when the model is the source of truth. Where the
+     * groups sit on screen needs layout, and waits for the frame.
+     */
+    const syncBackrefGroups = () => {
+      if (!overlay) {
+        return;
+      }
+      const notes = editor.read(() =>
+        $getOrderedFootnoteIds().map(footnoteId => ({
+          footnoteId,
+          number: $computeFootnoteNumbers().get(footnoteId) ?? '?',
+          refCount: $getFootnoteRefs(footnoteId).length,
+        })),
+      );
+      const live = new Set(notes.map(note => note.footnoteId));
+      for (const [footnoteId, group] of backrefGroups) {
+        if (!live.has(footnoteId)) {
+          group.remove();
+          backrefGroups.delete(footnoteId);
+        }
+      }
+      for (const {footnoteId, number, refCount} of notes) {
+        const existing = backrefGroups.get(footnoteId);
+        // Rebuilt rather than diffed when the cue count changes: adding or
+        // deleting a cue renumbers every backref after it anyway.
+        if (existing && existing.childElementCount === refCount) {
+          continue;
+        }
+        existing?.remove();
+        const group = document.createElement('span');
+        group.className = 'lexical-footnote__backrefs';
+        group.dataset.footnoteId = footnoteId;
+        for (let occurrence = 1; occurrence <= refCount; occurrence++) {
+          group.appendChild(
+            createBackrefButton(footnoteId, occurrence, number),
+          );
+        }
+        backrefGroups.set(footnoteId, group);
+        overlay.appendChild(group);
+      }
+    };
     const positionBackrefs = (rootElement: HTMLElement) => {
       if (!overlay) {
         return;
       }
       const overlayRect = overlay.getBoundingClientRect();
-      const seen = new Set<string>();
-      for (const content of Array.from(
-        rootElement.querySelectorAll('[data-lexical-footnote-def]'),
-      )) {
-        const footnoteId = content.getAttribute('data-lexical-footnote-def');
-        if (!footnoteId) {
+      for (const [footnoteId, group] of backrefGroups) {
+        const content = rootElement.querySelector(
+          `[data-lexical-footnote-def="${footnoteId}"]`,
+        );
+        if (!content) {
           continue;
         }
-        seen.add(footnoteId);
-        let button = backrefButtons.get(footnoteId);
-        if (!button) {
-          button = createBackrefButton(footnoteId);
-          backrefButtons.set(footnoteId, button);
-          overlay.appendChild(button);
-        }
         const end = measureNoteEnd(content);
-        button.style.left = `${end.x - overlayRect.left + 3}px`;
-        button.style.top = `${end.top - overlayRect.top}px`;
-        button.style.lineHeight = `${Math.round(end.height)}px`;
-      }
-      for (const [id, button] of backrefButtons) {
-        if (!seen.has(id)) {
-          button.remove();
-          backrefButtons.delete(id);
-        }
+        group.style.left = `${end.x - overlayRect.left + 3}px`;
+        group.style.top = `${end.top - overlayRect.top}px`;
+        group.style.lineHeight = `${Math.round(end.height)}px`;
       }
     };
     /**
@@ -786,17 +849,19 @@ export const FootnoteExtension = defineExtension({
         return;
       }
       // Plain and Alt (word-jump) ArrowRight both stop at the note end and
-      // hand focus to that note's backref button. Capture phase: bubbling
+      // hand focus to that note's first backref. Capture phase: bubbling
       // keystrokes reach Lexical's own key handling first otherwise.
       if (key === 'ArrowRight') {
         const footnoteId = editor.read(
           () => $definitionAtSelectionEnd()?.getFootnoteId() ?? null,
         );
-        const button = footnoteId ? backrefButtons.get(footnoteId) : null;
-        if (button) {
+        const first = footnoteId
+          ? backrefGroups.get(footnoteId)?.firstElementChild
+          : null;
+        if (first instanceof HTMLElement) {
           event.preventDefault();
           event.stopPropagation();
-          button.focus();
+          first.focus();
         }
         return;
       }
@@ -890,7 +955,7 @@ export const FootnoteExtension = defineExtension({
         removeRootHandlers = null;
         overlay?.remove();
         overlay = null;
-        backrefButtons.clear();
+        backrefGroups.clear();
         currentRoot = rootElement;
         if (!rootElement) {
           return;
@@ -900,6 +965,7 @@ export const FootnoteExtension = defineExtension({
         rootElement.insertAdjacentElement('afterend', overlayElement);
         overlay = overlayElement;
         syncSectionList();
+        syncBackrefGroups();
         positionBackrefs(rootElement);
         removeRootHandlers = mergeRegister(
           registerEventListener(rootElement, 'keydown', onRootKeydown, {
@@ -912,7 +978,7 @@ export const FootnoteExtension = defineExtension({
             : () => {},
           () => {
             overlayElement.remove();
-            backrefButtons.clear();
+            backrefGroups.clear();
           },
         );
       }),
@@ -935,6 +1001,7 @@ export const FootnoteExtension = defineExtension({
           knownRefIds = $collectRefIds();
         });
         syncSectionList();
+        syncBackrefGroups();
         scheduleBackrefs();
       }),
       editor.registerCommand(

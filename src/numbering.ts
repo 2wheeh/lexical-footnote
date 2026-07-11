@@ -1,6 +1,6 @@
 import {$dfs} from '@lexical/utils';
 
-import {$isFootnoteRefNode} from './FootnoteRefNode';
+import {$isFootnoteRefNode, type FootnoteRefNode} from './FootnoteRefNode';
 
 /**
  * Display numbers, derived from the document order of first references
@@ -22,6 +22,21 @@ export function $computeFootnoteNumbers(): ReadonlyMap<string, number> {
     }
   }
   return numbers;
+}
+
+/**
+ * Every cue for a footnote, in document order. Order matters here — GFM gives
+ * a note one backref per cue, and the nth backref has to lead back to the nth
+ * cue — so this walks the body rather than reading the unordered node map.
+ */
+export function $getFootnoteRefs(footnoteId: string): FootnoteRefNode[] {
+  const refs: FootnoteRefNode[] = [];
+  for (const {node} of $dfs()) {
+    if ($isFootnoteRefNode(node) && node.getFootnoteId() === footnoteId) {
+      refs.push(node);
+    }
+  }
+  return refs;
 }
 
 /** Definition ids in display order: referenced ones by number, then orphans. */

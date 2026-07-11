@@ -10,6 +10,8 @@ import {
   type StateValueOrUpdater,
 } from 'lexical';
 
+import {backrefLabel, backrefTargetId} from './gfm';
+import {$computeFootnoteNumbers, $getFootnoteRefs} from './numbering';
 import {footnoteIdState} from './state';
 
 /**
@@ -53,25 +55,41 @@ export class FootnoteDefinitionNode extends ElementNode {
     return false;
   }
 
-  /** GFM-style HTML: `<li id="fn-id">…<a href="#fnref-id" data-footnote-backref>↩</a></li>` */
+  /**
+   * GFM-style HTML: `<li id="fn-id">…<a href="#fnref-id" data-footnote-backref>↩</a></li>`.
+   *
+   * One backref per cue, not per note: a note cited three times is reachable
+   * from three places, and each backref leads to its own cue (`↩`, `↩²`, `↩³`).
+   * They go inside the note's last paragraph, separated by spaces, so they
+   * read as a trailing run of links rather than a block of their own.
+   */
   exportDOM(): DOMExportOutput {
     const id = this.getFootnoteId();
+    const number = $computeFootnoteNumbers().get(id) ?? '?';
+    const refCount = $getFootnoteRefs(id).length;
     const item = document.createElement('li');
     item.setAttribute('id', `fn-${id}`);
     return {
       // Mutates in place and returns undefined: returning the element itself
       // would trigger `element.replaceWith(element)` in the exporter.
       after: generatedElement => {
-        if (generatedElement instanceof HTMLElement) {
+        if (!(generatedElement instanceof HTMLElement)) {
+          return undefined;
+        }
+        const last = generatedElement.lastElementChild;
+        const host = last?.tagName === 'P' ? last : generatedElement;
+        for (let occurrence = 1; occurrence <= refCount; occurrence++) {
           const backref = document.createElement('a');
-          backref.setAttribute('href', `#fnref-${id}`);
+          backref.setAttribute('href', `#${backrefTargetId(id, occurrence)}`);
           backref.setAttribute('data-footnote-backref', 'true');
-          backref.setAttribute('aria-label', 'Back to reference');
-          backref.textContent = '↩';
-          const last = generatedElement.lastElementChild;
-          (last?.tagName === 'P' ? last : generatedElement).appendChild(
-            backref,
-          );
+          backref.setAttribute('aria-label', backrefLabel(number, occurrence));
+          backref.append('↩');
+          if (occurrence > 1) {
+            const sup = document.createElement('sup');
+            sup.textContent = String(occurrence);
+            backref.appendChild(sup);
+          }
+          host.append(' ', backref);
         }
         return undefined;
       },

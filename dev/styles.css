@@ -157,6 +157,14 @@ body {
   z-index: 1;
 }
 
+/* A note cited N times gets N backrefs — one per cue — laid out as a run at
+   the end of the note's last line. Only the run is positioned. */
+.lexical-footnote__backrefs {
+  display: inline-flex;
+  gap: 0.25em;
+  position: absolute;
+}
+
 .lexical-footnote__backref {
   background: none;
   border: none;
@@ -165,7 +173,10 @@ body {
   font-size: 0.8125em;
   padding: 0;
   pointer-events: auto;
-  position: absolute;
+}
+
+.lexical-footnote__backref sup {
+  font-size: 0.75em;
 }
 
 .lexical-footnote__backref:hover {
