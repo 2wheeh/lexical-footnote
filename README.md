@@ -7,7 +7,8 @@ navigation, GFM-compatible HTML export/import, and markdown round-trip via
 
 > **Status: experimental POC.** Built against `lexical@0.47.0` and its
 > experimental extension / mdast / DOM-import APIs, which may break between
-> releases. Pin your lexical version.
+> releases. Pin your lexical version. See [ROADMAP.md](./ROADMAP.md) for
+> what's planned.
 
 ## Model
 
