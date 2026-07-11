@@ -10,6 +10,7 @@ import {
   $getSelection,
   $getSiblingCaret,
   $isElementNode,
+  $isNodeSelection,
   $isRangeSelection,
   $isTextPointCaret,
   $setSelection,
@@ -192,29 +193,36 @@ function $scrollToKey(editor: LexicalEditor, key: string): void {
 }
 
 function gotoDefinition(editor: LexicalEditor, footnoteId: string): void {
-  editor.update(
-    () => {
-      const definition = $getFootnoteDefinition(footnoteId);
-      if (definition) {
-        definition.selectStart();
-        $scrollToKey(editor, definition.getKey());
-      }
-    },
-    {tag: 'footnote-navigation'},
-  );
+  // focus first: navigation may be triggered from outside the editor
+  // (e.g. the keyboard-focused backref button), and DOM selection only
+  // syncs while the editor is focused.
+  editor.focus(() => {
+    editor.update(
+      () => {
+        const definition = $getFootnoteDefinition(footnoteId);
+        if (definition) {
+          definition.selectStart();
+          $scrollToKey(editor, definition.getKey());
+        }
+      },
+      {tag: 'footnote-navigation'},
+    );
+  });
 }
 
 function gotoRef(editor: LexicalEditor, footnoteId: string): void {
-  editor.update(
-    () => {
-      const ref = $getFirstFootnoteRef(footnoteId);
-      if (ref) {
-        ref.selectEnd();
-        $scrollToKey(editor, ref.getKey());
-      }
-    },
-    {tag: 'footnote-navigation'},
-  );
+  editor.focus(() => {
+    editor.update(
+      () => {
+        const ref = $getFirstFootnoteRef(footnoteId);
+        if (ref) {
+          ref.selectEnd();
+          $scrollToKey(editor, ref.getKey());
+        }
+      },
+      {tag: 'footnote-navigation'},
+    );
+  });
 }
 
 /**
@@ -413,8 +421,21 @@ export const FootnoteExtension = defineExtension({
       if (!(target instanceof Element)) {
         return;
       }
+      // Keyboard path: the visually hidden backref button (click fires on
+      // Enter/Space too).
+      const backrefButton = target.closest('[data-lexical-footnote-backref]');
       const li = target.closest('[data-lexical-footnote-def]');
       if (!li) {
+        return;
+      }
+      if (backrefButton) {
+        // Mouse/AT-synthesized clicks; keyboard Enter/Space is intercepted
+        // at keydown (capture) before Lexical's own key handling.
+        const footnoteId = li.getAttribute('data-lexical-footnote-def');
+        if (footnoteId) {
+          event.preventDefault();
+          output.gotoRef(footnoteId);
+        }
         return;
       }
       // The backref is a ::after pseudo-element (and the number a ::marker),
@@ -440,6 +461,128 @@ export const FootnoteExtension = defineExtension({
       if (footnoteId) {
         event.preventDefault();
         output.gotoRef(footnoteId);
+      }
+    };
+    // Returns the definition whose very end the collapsed selection sits at.
+    const $definitionAtSelectionEnd = (): FootnoteDefinitionNode | null => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+        return null;
+      }
+      const anchor = selection.anchor;
+      let definition: FootnoteDefinitionNode | null = null;
+      for (
+        let node: ReturnType<typeof anchor.getNode> | null = anchor.getNode();
+        node;
+        node = node.getParent()
+      ) {
+        if ($isFootnoteDefinitionNode(node)) {
+          definition = node;
+          break;
+        }
+      }
+      if (!definition) {
+        return null;
+      }
+      const anchorNode = anchor.getNode();
+      const last = definition.getLastDescendant() ?? definition;
+      if (anchor.type === 'text') {
+        return anchorNode === last &&
+          anchor.offset === anchorNode.getTextContentSize()
+          ? definition
+          : null;
+      }
+      return anchorNode === last ||
+        ($isElementNode(anchorNode) &&
+          anchorNode.getChildrenSize() === anchor.offset &&
+          anchorNode.getLastDescendant() === last)
+        ? definition
+        : null;
+    };
+    // Keyboard navigation, handled in the capture phase at keydown — the
+    // backref button sits inside the contentEditable root, so otherwise the
+    // keystroke bubbles into Lexical's own key handling (e.g. Enter inserts
+    // a paragraph at the editor's stale selection).
+    //
+    // - ArrowRight at the end of a note focuses its backref (roving focus;
+    //   the button has tabindex=-1 and is not in the page tab order)
+    // - Enter/Space on the focused backref navigates back to the ref
+    // - ArrowLeft/Escape on the backref returns the caret to the note end
+    // - Enter while a cue is node-selected opens its definition
+    const onRootKeydown = (event: KeyboardEvent) => {
+      const {key} = event;
+      if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey) {
+        return;
+      }
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      const backref = target.closest('[data-lexical-footnote-backref]');
+      if (backref) {
+        const footnoteId = backref
+          .closest('[data-lexical-footnote-def]')
+          ?.getAttribute('data-lexical-footnote-def');
+        if (!footnoteId) {
+          return;
+        }
+        if (key === 'Enter' || key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          // The button lives inside the contentEditable root, so
+          // editor.focus() considers focus already inside and won't move
+          // it; blur first so DOM focus actually lands on the editor.
+          if (backref instanceof HTMLElement) {
+            backref.blur();
+          }
+          output.gotoRef(footnoteId);
+        } else if (key === 'ArrowLeft' || key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          if (backref instanceof HTMLElement) {
+            backref.blur();
+          }
+          editor.focus(() => {
+            editor.update(
+              () => {
+                $getFootnoteDefinition(footnoteId)?.selectEnd();
+              },
+              {tag: 'footnote-navigation'},
+            );
+          });
+        }
+        return;
+      }
+      if (key === 'ArrowRight') {
+        const definition = editor.read($definitionAtSelectionEnd);
+        if (definition) {
+          const button = editor
+            .getElementByKey(definition.getKey())
+            ?.querySelector('[data-lexical-footnote-backref]');
+          if (button instanceof HTMLElement) {
+            event.preventDefault();
+            event.stopPropagation();
+            button.focus();
+          }
+        }
+        return;
+      }
+      if (key === 'Enter') {
+        const refId = editor.read(() => {
+          const selection = $getSelection();
+          if (!$isNodeSelection(selection)) {
+            return null;
+          }
+          const nodes = selection.getNodes();
+          return nodes.length === 1 && $isFootnoteRefNode(nodes[0])
+            ? nodes[0].getFootnoteId()
+            : null;
+        });
+        if (refId) {
+          event.preventDefault();
+          event.stopPropagation();
+          output.gotoDefinition(refId);
+        }
       }
     };
     let removeRootClick: (() => void) | null = null;
@@ -477,7 +620,12 @@ export const FootnoteExtension = defineExtension({
       editor.registerRootListener(rootElement => {
         removeRootClick?.();
         removeRootClick = rootElement
-          ? registerEventListener(rootElement, 'click', onRootClick)
+          ? mergeRegister(
+              registerEventListener(rootElement, 'click', onRootClick),
+              registerEventListener(rootElement, 'keydown', onRootKeydown, {
+                capture: true,
+              }),
+            )
           : null;
       }),
       editor.registerCommand(

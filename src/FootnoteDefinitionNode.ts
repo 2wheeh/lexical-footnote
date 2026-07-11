@@ -46,10 +46,25 @@ export class FootnoteDefinitionNode extends ElementNode {
     content.className =
       (config.theme.footnoteDefinitionContent as string | undefined) ||
       'lexical-footnote__definition-content';
-    // The in-editor backref marker is a CSS ::after pseudo-element on this
-    // div — a real element here would become a caret stop inside the li.
+    // The VISIBLE backref marker is a CSS ::after pseudo-element on this
+    // div — an in-flow element here would become a caret stop inside the
+    // li. Keyboard/screen-reader access is provided by a separate
+    // out-of-flow (absolutely positioned, visually hidden) button, which
+    // does not participate in line boxes and so is never a caret position.
     content.setAttribute('data-lexical-footnote-content', 'true');
-    li.append(content);
+    const backref = document.createElement('button');
+    backref.type = 'button';
+    backref.setAttribute('data-lexical-footnote-backref', 'true');
+    backref.contentEditable = 'false';
+    // Roving focus: reached with ArrowRight from the end of the note, not
+    // Tab — the editor should be a single tab stop for the page.
+    backref.tabIndex = -1;
+    backref.className =
+      (config.theme.footnoteBackref as string | undefined) ||
+      'lexical-footnote__backref';
+    backref.setAttribute('aria-label', 'Back to reference');
+    backref.textContent = '↩';
+    li.append(content, backref);
     return li;
   }
 

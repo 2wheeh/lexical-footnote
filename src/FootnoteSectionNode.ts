@@ -20,6 +20,7 @@ export class FootnoteSectionNode extends ElementNode {
   createDOM(config: EditorConfig): HTMLElement {
     const ol = document.createElement('ol');
     ol.setAttribute('data-lexical-footnote-section', 'true');
+    ol.setAttribute('aria-label', 'Footnotes');
     ol.className =
       (config.theme.footnoteSection as string | undefined) ||
       'lexical-footnote__section';

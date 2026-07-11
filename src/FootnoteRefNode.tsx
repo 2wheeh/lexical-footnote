@@ -107,6 +107,7 @@ function FootnoteRefComponent({
     <sup className={isSelected ? 'lexical-footnote__ref--selected' : undefined}>
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => gotoDefinition(footnoteId)}
         aria-label={`Go to footnote ${number ?? footnoteId}`}>
         {number ?? '?'}
