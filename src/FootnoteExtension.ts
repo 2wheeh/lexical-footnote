@@ -21,6 +21,7 @@ import {
   DELETE_CHARACTER_COMMAND,
   registerEventListener,
   RootNode,
+  TextNode,
   type LexicalCommand,
   type LexicalEditor,
 } from 'lexical';
@@ -336,6 +337,31 @@ function $rootTransform(node: RootNode): void {
   const section = $getFootnoteSection();
   if (section && node.getLastChild() !== section) {
     node.append(section);
+  }
+}
+
+const REF_SHORTCUT_REGEX = /\[\^([^\s[\]]+)\]/;
+
+/**
+ * Typing shortcut: literal `[^id]` in body text materializes a cue (the
+ * definition heals into existence via $refTransform). Skips code-formatted
+ * text.
+ */
+function $textToRefTransform(node: TextNode): void {
+  if (!node.isSimpleText() || node.hasFormat('code')) {
+    return;
+  }
+  const match = REF_SHORTCUT_REGEX.exec(node.getTextContent());
+  if (!match) {
+    return;
+  }
+  const start = match.index;
+  const parts = node.splitText(start, start + match[0].length);
+  const target = (start === 0 ? parts[0] : parts[1]) ?? null;
+  if (target) {
+    const ref = $createFootnoteRefNode(match[1]!);
+    target.replace(ref);
+    ref.selectEnd();
   }
 }
 
@@ -666,6 +692,7 @@ export const FootnoteExtension = defineExtension({
         },
         COMMAND_PRIORITY_EDITOR,
       ),
+      editor.registerNodeTransform(TextNode, $textToRefTransform),
       editor.registerNodeTransform(FootnoteRefNode, $refTransform),
       editor.registerNodeTransform(FootnoteDefinitionNode, $defTransform),
       editor.registerNodeTransform(FootnoteSectionNode, $sectionTransform),

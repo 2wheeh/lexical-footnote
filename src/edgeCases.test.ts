@@ -276,6 +276,51 @@ describe('edge cases', () => {
     expect(getNumbers().has('bye')).toBe(false);
   });
 
+  it('materializes a cue when literal [^id] is typed', () => {
+    editor.update(
+      () => {
+        const p = $createParagraphNode().append(
+          $createTextNode('see[^tip] more'),
+        );
+        $getRoot().clear().append(p);
+      },
+      {discrete: true},
+    );
+    editor.read(() => {
+      const p = $getRoot().getFirstChild();
+      expect($isParagraphNode(p)).toBe(true);
+      if (!$isParagraphNode(p)) {
+        return;
+      }
+      expect(p.getChildren().some($isFootnoteRefNode)).toBe(true);
+      const ref = p.getChildren().find($isFootnoteRefNode)!;
+      expect(ref.getFootnoteId()).toBe('tip');
+      // surrounding text preserved
+      expect(p.getTextContent()).toContain('see');
+      expect(p.getTextContent()).toContain(' more');
+      // definition healed into existence
+      expect($getFootnoteSection()).not.toBeNull();
+    });
+    expect(getNumbers().get('tip')).toBe(1);
+  });
+
+  it('does not convert [^id] inside code-formatted text', () => {
+    editor.update(
+      () => {
+        const text = $createTextNode('const a = "[^x]"');
+        text.toggleFormat('code');
+        $getRoot().clear().append($createParagraphNode().append(text));
+      },
+      {discrete: true},
+    );
+    editor.read(() => {
+      const p = $getRoot().getFirstChild();
+      const hasRef =
+        $isParagraphNode(p) && p.getChildren().some($isFootnoteRefNode);
+      expect(hasRef).toBe(false);
+    });
+  });
+
   it('removes the section when the last footnote is removed', () => {
     editor.update(
       () => {

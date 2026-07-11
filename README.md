@@ -47,7 +47,9 @@ const appExtension = defineExtension({
 <LexicalExtensionComposer extension={appExtension}>…</LexicalExtensionComposer>
 ```
 
-Insert via command or output API:
+Insert via command, output API, or by typing — literal `[^id]` in body
+text materializes a cue and heals an empty definition (skipped inside
+code-formatted text):
 
 ```ts
 editor.dispatchCommand(INSERT_FOOTNOTE_COMMAND, undefined);

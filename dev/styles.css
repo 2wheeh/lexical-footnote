@@ -135,9 +135,10 @@ body {
    visible inside the otherwise empty paragraph. */
 .lexical-footnote__definition-content > p:last-child:has(> br:only-child) {
   display: inline-block;
-  min-height: 1lh;
+  /* an empty inline-block's baseline is its bottom edge, so a 1em-tall box
+     sits exactly on the text baseline — the caret inside aligns with text */
+  height: 1em;
   min-width: 1px;
-  vertical-align: text-bottom;
 }
 
 .lexical-footnote__definition-content > p:last-child > br:only-child {
