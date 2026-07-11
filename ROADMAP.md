@@ -16,13 +16,19 @@ prioritized.
 - [ ] **Framework-agnostic cue** — `decorate()` currently returns React.
   Investigate a vanilla rendering path so non-React consumers can use the
   extension.
-- [ ] Extract the overlay/keyboard UI out of `FootnoteExtension.register`
-  into its own module (internal refactor, no behavior change).
+- [x] Extract the overlay/keyboard UI out of `FootnoteExtension.register` —
+  the source now splits into `model/` (the rules: headless, no DOM), `ui/`
+  (list items, backref overlay, keyboard) and `io/` (the HTML contracts and
+  importers), with the extension itself reduced to wiring. That line is where
+  the Firefox caret bug lived, and it is the line the two test projects run
+  along.
 - [x] Replace whole-document `$dfs` walks where possible: unordered lookups
-  read the node map (`$nodesOfType`), and the order-sensitive ones now share
-  a single walk (`$collectFootnoteRefs`). `$dfs` not traversing slot subtrees
-  is what makes it exactly a walk of the body — cues live there, definitions
-  are slot values — so it is the right tool here rather than `$dfsWithSlots`.
+  read the node map (`$nodesOfType`), and the order-sensitive ones share a
+  single walk (`$collectFootnoteRefs`) instead of one per note per commit.
+  Not `$dfsWithSlots`: it visits slot subtrees in slot-map order — the
+  code-unit order of the ids — which has nothing to do with reference order.
+  The body is walked first, then the notes deliberately, in the order GFM
+  numbers them.
 - [ ] Export walks the document once per footnote node (`exportDOM` has no
   shared context to hang a cache on, and caching by editor-state identity
   goes stale inside an update). Fine at document scale; revisit if it bites.
@@ -82,12 +88,21 @@ prioritized.
 
 - [ ] **Docs site with working examples** — evolve the demo deployment into
   interactive documentation (usage, recipes, live playground).
-- [ ] Cross-browser verification (Firefox, Safari) for caret and overlay
-  interactions — paste flows are already verified across Chrome, Firefox,
-  and Safari — and a real screen-reader pass (VoiceOver).
-- [ ] Playwright e2e coverage for the keyboard/mouse flows that unit tests
-  can't reach.
-- [ ] Package lint in CI (`publint`, `attw`), `prepublishOnly` guard.
+- [x] Cross-browser verification for caret and overlay interactions —
+  `pnpm test:browser` runs the caret specs in Chromium, Firefox and WebKit
+  (vitest browser mode, playwright provider). This is where the Firefox bug
+  surfaced: each note is an editable island, and Firefox will not carry the
+  caret across one, so moving between notes is the extension's job in every
+  browser. happy-dom has no caret and could never have caught it. Paste flows
+  were already verified across the three engines by hand.
+- [ ] A real screen-reader pass (VoiceOver). The exported HTML now carries
+  GFM's own a11y contract (`aria-describedby` on every cue, a visually-hidden
+  `footnote-label` heading, labelled backrefs), but it has been read by no
+  screen reader yet.
+- [ ] Extend the browser project beyond the caret: click-to-jump, backref
+  focus flows, paste. Only the caret specs run there today.
+- [ ] Package lint in CI (`publint`, `attw`), `prepublishOnly` guard. No CI
+  runs the browser project yet either.
 
 ## Upstream
 

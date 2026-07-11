@@ -191,10 +191,19 @@ cleanup command, and empty notes that render and heal.
 
 ```bash
 pnpm install
-pnpm dev        # vite demo
-pnpm test       # vitest
-pnpm build      # tsdown
+pnpm dev            # vite demo
+pnpm test           # vitest, headless (happy-dom)
+pnpm test:browser   # Chromium, Firefox and WebKit, via playwright
+pnpm build          # tsdown
 ```
+
+Caret behavior is only judged by `test:browser`. Each note renders as an
+editable island — a slot container with its own `contentEditable` — and the
+engines disagree at an island's boundary: Firefox will not carry the caret out
+of one. happy-dom has no caret at all, so the headless suite cannot see any of
+it. The source is split along the same line: `model/` is the rules and is
+judged headlessly, `ui/` needs a real browser, `io/` is the contracts with
+other formats.
 
 ## License
 
