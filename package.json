@@ -49,9 +49,11 @@
     "build": "tsdown",
     "build:demo": "vite build",
     "dev": "vite",
-    "test": "vitest run",
+    "test": "vitest run --project unit",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:browser": "vitest run --project browser",
+    "test:all": "vitest run"
   },
   "keywords": [
     "lexical",
@@ -107,10 +109,12 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "@vitest/browser": "^3.2.7",
     "happy-dom": "^18.0.1",
     "lexical": "0.47.0",
     "mdast-util-gfm-footnote": "^2.1.0",
     "micromark-extension-gfm-footnote": "^2.1.0",
+    "playwright": "^1.61.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tsdown": "^0.22.4",

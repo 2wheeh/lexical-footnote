@@ -856,6 +856,36 @@ export const FootnoteExtension = defineExtension({
         run();
       }
     };
+    /**
+     * Is the caret on the note's first (or last) visual line? Measured, not
+     * derived from the model: a single paragraph can wrap into several lines,
+     * and inside those the arrow keys should keep moving by line as usual. We
+     * only take over at the note's real top and bottom edge.
+     */
+    const atNoteEdge = (direction: 'up' | 'down'): boolean => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        return false;
+      }
+      const anchor = selection.anchorNode;
+      const element =
+        anchor instanceof Element ? anchor : (anchor?.parentElement ?? null);
+      const note = element?.closest('[data-lexical-footnote-def]');
+      if (!note) {
+        return false;
+      }
+      const caret = selection.getRangeAt(0).getBoundingClientRect();
+      const box = note.getBoundingClientRect();
+      // A collapsed range can measure as all-zeros; treat that as an edge
+      // rather than trapping the caret in the note.
+      if (caret.top === 0 && caret.bottom === 0) {
+        return true;
+      }
+      const tolerance = 4;
+      return direction === 'up'
+        ? caret.top - box.top <= tolerance
+        : box.bottom - caret.bottom <= tolerance;
+    };
     const onRootKeydown = (event: KeyboardEvent) => {
       const {key} = event;
       if (event.metaKey || event.ctrlKey || event.shiftKey) {
@@ -875,6 +905,29 @@ export const FootnoteExtension = defineExtension({
           event.preventDefault();
           event.stopPropagation();
           first.focus();
+        }
+        return;
+      }
+      // Vertical movement between notes is ours, in every browser. Each note
+      // is its own editable island (that is what a slot container is), and
+      // Firefox will not carry the caret across one: ArrowUp/ArrowDown there
+      // only walk to the island's own start and end, so the notes are a
+      // keyboard dead end. Chrome and Safari happen to cross, which is a
+      // behavior we cannot rely on and should not depend on differing.
+      if (key === 'ArrowUp' || key === 'ArrowDown') {
+        const footnoteId = editor.read(
+          () => $definitionAtSelection()?.getFootnoteId() ?? null,
+        );
+        // Only at the note's own edge: inside a wrapped or multi-paragraph
+        // note, the arrow keys still move by line, natively.
+        if (footnoteId && atNoteEdge(key === 'ArrowUp' ? 'up' : 'down')) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (key === 'ArrowUp') {
+            gotoPreviousDefinitionOrBody(footnoteId);
+          } else {
+            gotoNextDefinitionStart(footnoteId);
+          }
         }
         return;
       }
