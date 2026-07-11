@@ -7,7 +7,11 @@ import {
   $createParagraphNode,
   $createTextNode,
   $getRoot,
+  $getSelection,
+  $isNodeSelection,
   $isParagraphNode,
+  $isRangeSelection,
+  DELETE_CHARACTER_COMMAND,
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
@@ -187,6 +191,89 @@ describe('edge cases', () => {
       const children = p.getChildren();
       expect($isFootnoteRefNode(children[children.length - 1])).toBe(true);
     });
+  });
+
+  it('backspace at a cue boundary selects the cue instead of deleting it', () => {
+    editor.update(
+      () => {
+        const before = $createTextNode('before ');
+        const after = $createTextNode('after');
+        const p = $createParagraphNode().append(
+          before,
+          $createFootnoteRefNode('sel'),
+          after,
+        );
+        $getRoot().clear().append(p);
+        after.select(0, 0);
+      },
+      {discrete: true},
+    );
+    editor.dispatchCommand(DELETE_CHARACTER_COMMAND, true);
+    editor.read(() => {
+      const selection = $getSelection();
+      expect($isNodeSelection(selection)).toBe(true);
+      const nodes = selection!.getNodes();
+      expect(nodes).toHaveLength(1);
+      expect($isFootnoteRefNode(nodes[0])).toBe(true);
+      // cue still present
+      const p = $getRoot().getFirstChild();
+      const refs = $isParagraphNode(p)
+        ? p.getChildren().filter($isFootnoteRefNode)
+        : [];
+      expect(refs).toHaveLength(1);
+    });
+  });
+
+  it('backspace mid-text does not hijack deletion', () => {
+    editor.update(
+      () => {
+        const after = $createTextNode('after');
+        const p = $createParagraphNode().append(
+          $createFootnoteRefNode('sel2'),
+          after,
+        );
+        $getRoot().clear().append(p);
+        after.select(2, 2);
+      },
+      {discrete: true},
+    );
+    editor.dispatchCommand(DELETE_CHARACTER_COMMAND, true);
+    editor.read(() => {
+      expect($isRangeSelection($getSelection())).toBe(true);
+    });
+  });
+
+  it('deleting a definition removes its refs in the same update', () => {
+    editor.update(
+      () => {
+        const p = $createParagraphNode().append(
+          $createTextNode('x'),
+          $createFootnoteRefNode('bye'),
+          $createFootnoteRefNode('stay'),
+        );
+        $getRoot().clear().append(p);
+      },
+      {discrete: true},
+    );
+    editor.update(
+      () => {
+        const section = $getFootnoteSection()!;
+        for (const def of section.getChildren().filter($isFootnoteDefinitionNode)) {
+          if (def.getFootnoteId() === 'bye') {
+            def.remove();
+          }
+        }
+      },
+      {discrete: true},
+    );
+    editor.read(() => {
+      const p = $getRoot().getFirstChild();
+      const ids = $isParagraphNode(p)
+        ? p.getChildren().filter($isFootnoteRefNode).map(r => r.getFootnoteId())
+        : [];
+      expect(ids).toEqual(['stay']);
+    });
+    expect(getNumbers().has('bye')).toBe(false);
   });
 
   it('removes the section when the last footnote is removed', () => {

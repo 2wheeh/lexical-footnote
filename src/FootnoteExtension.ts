@@ -2,15 +2,23 @@ import {signal} from '@lexical/extension';
 import {CoreImportExtension, DOMImportExtension} from '@lexical/html';
 import {$dfs, mergeRegister} from '@lexical/utils';
 import {
+  $caretFromPoint,
+  $createNodeSelection,
   $createParagraphNode,
   $getNodeByKey,
   $getRoot,
   $getSelection,
+  $getSiblingCaret,
+  $isElementNode,
   $isRangeSelection,
+  $isTextPointCaret,
+  $setSelection,
   COMMAND_PRIORITY_EDITOR,
+  COMMAND_PRIORITY_LOW,
   configExtension,
   createCommand,
   defineExtension,
+  DELETE_CHARACTER_COMMAND,
   registerEventListener,
   RootNode,
   type LexicalCommand,
@@ -324,6 +332,44 @@ function $rootTransform(node: RootNode): void {
   }
 }
 
+/**
+ * Backspace/delete adjacent to a cue selects it first instead of deleting
+ * it outright (Word/Notion behavior). NodeCaret recipe from the Lexical
+ * maintainers; $normalizeCaret handles cues wrapped in e.g. MarkNode.
+ */
+function $selectRefOnDeleteCharacter(isBackward: boolean): boolean {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+    return false;
+  }
+  const {anchor} = selection;
+  if (
+    anchor.type === 'text' &&
+    (isBackward
+      ? anchor.offset > 0
+      : anchor.offset < anchor.getNode().getTextContentSize())
+  ) {
+    // Deleting within a text node, not across a node boundary.
+    return false;
+  }
+  const pointCaret = $caretFromPoint(anchor, isBackward ? 'previous' : 'next');
+  const nodeCaret = $isTextPointCaret(pointCaret)
+    ? $getSiblingCaret(pointCaret.origin, pointCaret.direction)
+    : pointCaret;
+  let node = nodeCaret.getNodeAtCaret();
+  // Descend into wrapping inline elements (e.g. MarkNode around the cue).
+  while ($isElementNode(node)) {
+    node = isBackward ? node.getLastChild() : node.getFirstChild();
+  }
+  if (!$isFootnoteRefNode(node)) {
+    return false;
+  }
+  const nodeSelection = $createNodeSelection();
+  nodeSelection.add(node.getKey());
+  $setSelection(nodeSelection);
+  return true;
+}
+
 export const FootnoteExtension = defineExtension({
   dependencies: [
     CoreImportExtension,
@@ -380,6 +426,35 @@ export const FootnoteExtension = defineExtension({
       }
     };
     let removeRootClick: (() => void) | null = null;
+    // Definition ids as of the last committed state; lets the RootNode
+    // transform detect "a definition was deleted" (destroys are invisible
+    // to per-node transforms) and apply the policy: deleting a definition
+    // deletes its refs, in the same update so undo restores both.
+    let knownDefIds: ReadonlySet<string> = new Set();
+    const $collectDefIds = (): ReadonlySet<string> => {
+      const ids = new Set<string>();
+      const section = $getFootnoteSection();
+      if (section) {
+        for (const child of section.getChildren()) {
+          if ($isFootnoteDefinitionNode(child)) {
+            ids.add(child.getFootnoteId());
+          }
+        }
+      }
+      return ids;
+    };
+    const $removeRefsOfDeletedDefs = (): void => {
+      const currentIds = $collectDefIds();
+      for (const id of knownDefIds) {
+        if (!currentIds.has(id)) {
+          for (const {node} of $dfs()) {
+            if ($isFootnoteRefNode(node) && node.getFootnoteId() === id) {
+              node.remove();
+            }
+          }
+        }
+      }
+    };
     return mergeRegister(
       () => removeRootClick?.(),
       editor.registerRootListener(rootElement => {
@@ -387,6 +462,15 @@ export const FootnoteExtension = defineExtension({
         removeRootClick = rootElement
           ? registerEventListener(rootElement, 'click', onRootClick)
           : null;
+      }),
+      editor.registerCommand(
+        DELETE_CHARACTER_COMMAND,
+        $selectRefOnDeleteCharacter,
+        COMMAND_PRIORITY_LOW,
+      ),
+      editor.registerNodeTransform(RootNode, $removeRefsOfDeletedDefs),
+      editor.registerUpdateListener(() => {
+        knownDefIds = editor.read($collectDefIds);
       }),
       editor.registerCommand(
         INSERT_FOOTNOTE_COMMAND,

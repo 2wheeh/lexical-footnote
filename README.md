@@ -85,9 +85,13 @@ rules accept both this output and GitHub's `user-content-` prefixed HTML.
   `$cleanupOrphanFootnotes()` to permanently discard unreferenced
   definitions — it returns `true` when anything was removed. Use
   `$removeFootnote(id)` to remove refs and definition together.
-- Deleting a definition leaves its refs dangling; a dangling ref heals an
-  empty definition when next modified (references without content always
-  render as numbered entries).
+- Deleting a definition deletes its refs in the same update (undo restores
+  both) — deleting the definition means deleting the footnote. Refs that
+  become dangling some other way (e.g. pasted markers) heal an empty
+  definition, so references without content always render as numbered
+  entries.
+- Backspace/delete at a cue boundary selects the cue first instead of
+  deleting it outright (Word/Notion behavior); a second delete removes it.
 - Multiple refs to one id are valid (GFM) and share a number. This differs
   from tiptap/Word, which duplicate the footnote on paste — GFM semantics
   keep markdown round-trip exact.
