@@ -78,7 +78,28 @@ function Toolbar() {
 export function App() {
   return (
     <main>
-      <h1>lexical-footnote</h1>
+      <header className="site-header">
+        <h1>lexical-footnote</h1>
+        <nav className="site-links">
+          <a
+            href="https://github.com/2wheeh/lexical-footnote"
+            target="_blank"
+            rel="noreferrer">
+            GitHub
+          </a>
+          <a
+            href="https://www.npmjs.com/package/lexical-footnote"
+            target="_blank"
+            rel="noreferrer">
+            npm
+          </a>
+        </nav>
+      </header>
+      <p className="site-tagline">
+        GFM footnotes for Lexical — insert with the button or by typing{' '}
+        <code>[^id]</code>, click a cue to jump, ↩ to jump back, arrow keys
+        traverse notes.
+      </p>
       <LexicalExtensionComposer extension={appExtension}>
         <Toolbar />
         <ExtensionComponent lexical:extension={TreeViewExtension} />

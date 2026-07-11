@@ -5,6 +5,40 @@ body {
   padding: 0 1rem;
 }
 
+.site-header {
+  align-items: baseline;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.site-links {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.site-links a {
+  color: #6366f1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-links a:hover {
+  text-decoration: underline;
+}
+
+.site-tagline {
+  color: #555;
+  margin-top: -0.5rem;
+}
+
+.site-tagline code {
+  background: #f0f1f6;
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+}
+
 .toolbar {
   display: flex;
   gap: 0.5rem;
