@@ -65,7 +65,6 @@ body {
 
 .lexical-footnote__definition {
   margin-bottom: 0.375rem;
-  position: relative;
 }
 
 /* Backref buttons live in an overlay outside the contentEditable and are
