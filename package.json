@@ -52,6 +52,14 @@
   ],
   "author": "2wheeh",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/2wheeh/lexical-footnote.git"
+  },
+  "homepage": "https://github.com/2wheeh/lexical-footnote#readme",
+  "bugs": {
+    "url": "https://github.com/2wheeh/lexical-footnote/issues"
+  },
   "peerDependencies": {
     "@lexical/extension": "~0.47.0",
     "@lexical/html": "~0.47.0",
