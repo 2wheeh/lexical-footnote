@@ -5,7 +5,6 @@ import {
   $caretFromPoint,
   $createNodeSelection,
   $createParagraphNode,
-  $getNodeByKey,
   $getRoot,
   $getSelection,
   $getSiblingCaret,
@@ -658,7 +657,13 @@ export const FootnoteExtension = defineExtension({
         COMMAND_PRIORITY_LOW,
       ),
       editor.registerNodeTransform(RootNode, $removeRefsOfDeletedDefs),
+      // Recompute on every update: dirty-set gating misses refs inside
+      // wholesale subtree operations (clear, move, undo/redo's historic
+      // state swaps), and mapsEqual keeps the signal referentially stable.
+      // Not a mutation listener: those only fire with DOM reconciliation,
+      // which never happens in headless usage (tests, SSR, export workers).
       editor.registerUpdateListener(() => {
+        recomputeNumbers();
         knownDefIds = editor.read($collectDefIds);
       }),
       editor.registerCommand(
@@ -668,29 +673,6 @@ export const FootnoteExtension = defineExtension({
           return true;
         },
         COMMAND_PRIORITY_EDITOR,
-      ),
-      // Not a mutation listener: those only fire with DOM reconciliation,
-      // which never happens in headless usage (tests, SSR, export workers).
-      editor.registerUpdateListener(
-        ({dirtyLeaves, editorState, prevEditorState}) => {
-          if (dirtyLeaves.size === 0) {
-            return;
-          }
-          const $hasDirtyRef = () => {
-            for (const key of dirtyLeaves) {
-              if ($isFootnoteRefNode($getNodeByKey(key))) {
-                return true;
-              }
-            }
-            return false;
-          };
-          if (
-            editorState.read($hasDirtyRef) ||
-            prevEditorState.read($hasDirtyRef)
-          ) {
-            recomputeNumbers();
-          }
-        },
       ),
       editor.registerNodeTransform(FootnoteRefNode, $refTransform),
       editor.registerNodeTransform(FootnoteDefinitionNode, $defTransform),
