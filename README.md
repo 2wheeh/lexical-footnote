@@ -78,11 +78,23 @@ import {FootnoteClipboardExtension} from 'lexical-footnote/clipboard';
 
 Lexical's default paste path uses the legacy static-importDOM converter and
 never consults rule-based import. This extension routes `text/html` pastes
-through the DOMImportExtension pipeline, so pasting from **Word**, **Google
-Docs**, GitHub, or another lexical-footnote editor produces real footnotes
-(with fresh ids — a paste can't collide with or merge into existing notes).
-Opt-in because it reroutes all HTML pastes for the editor, not just
-footnote content.
+through the DOMImportExtension pipeline, so pasting footnote-bearing HTML
+produces real footnotes. Opt-in because it reroutes all HTML pastes for
+the editor, not just footnote content.
+
+Recognized sources (verified in Chrome, Firefox, and Safari):
+
+- **Word** — desktop and web copies, including Safari's sanitized clipboard
+  (absolute `applewebdata:` hrefs, stripped `mso-*` styles)
+- **Google Docs** — HTML the app exports or publishes (File → Download →
+  Web Page, or a published page). Copying inside the Docs editor doesn't
+  put definitions on the clipboard — a Docs limitation — so such pastes
+  produce cues with empty, editable notes
+- **GitHub**'s rendered GFM output and this package's own `exportDOM`
+
+Source chrome (separator rules, literal `[1]` markers, backref anchors) is
+stripped, and pasted footnotes get fresh ids so a paste can't collide with
+or merge into notes already in the document.
 
 ### HTML
 

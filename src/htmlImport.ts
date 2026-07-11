@@ -13,12 +13,12 @@ import {$createFootnoteSectionNode} from './FootnoteSectionNode';
 import {createFootnoteId} from './state';
 
 /**
- * Accepts both our own exportDOM output and GitHub's rendered GFM footnote
- * HTML (which prefixes ids with `user-content-`).
+ * `fn-<id>` from our own exportDOM, or GitHub's `user-content-fn-<id>`.
  */
-function parseFootnoteId(raw: string, prefix: 'fn' | 'fnref'): string {
-  const match = raw.match(new RegExp(`^(?:user-content-)?${prefix}-(.+)$`));
-  return match?.[1] ?? '';
+const GFM_FOOTNOTE_ID = /^(?:user-content-)?fn-(.+)$/;
+
+function parseGfmFootnoteId(raw: string): string {
+  return GFM_FOOTNOTE_ID.exec(raw)?.[1] ?? '';
 }
 
 // Word and Google Docs put footnotes on the clipboard as anchor pairs: a
@@ -36,13 +36,12 @@ const GDOCS_DEF_ANCHOR_ID = /^ftnt(\d+)$/;
 const IMPORTED_BACKREF_HREF = /#(?:_ftnref|ftnt_ref)\d+$/;
 
 /**
- * Source-number → generated id, one map per import pass. Word/Docs number
- * their footnotes 1..n, which would collide with footnotes already in the
- * document (or with an earlier paste), so every pasted footnote gets a
- * fresh id; the map only pairs a cue with its definition within the same
- * paste. The default is null — a Map default would be evaluated once and
- * shared across all sessions (context-state defaults are single
- * instances), silently merging repeated pastes.
+ * Source-number → generated id. Word/Docs number footnotes 1..n, which
+ * would collide with existing footnotes or an earlier paste, so pasted
+ * footnotes get fresh ids; the map only pairs a cue with its definition
+ * within one paste. The default must stay null: context-state defaults
+ * are evaluated once and shared across sessions, so a Map default would
+ * silently merge repeated pastes.
  */
 const importedFootnoteIds = /* @__PURE__ */ createImportState<Map<
   string,
@@ -76,7 +75,7 @@ const FootnoteRefImportRule = /* @__PURE__ */ defineImportRule({
   $import: (ctx, el, $next) => {
     const href = el.getAttribute('href') ?? '';
     if (el.getAttribute('data-footnote-ref') !== null) {
-      const id = parseFootnoteId(href.replace(/^.*#/, ''), 'fn');
+      const id = parseGfmFootnoteId(href.replace(/^.*#/, ''));
       return id ? [$createFootnoteRefNode(id)] : $next();
     }
     for (const {href: pattern, source} of CUE_PATTERNS) {
@@ -98,7 +97,7 @@ const FootnoteRefImportRule = /* @__PURE__ */ defineImportRule({
 const FootnoteDefinitionImportRule = /* @__PURE__ */ defineImportRule({
   $import: (ctx, el, $next) => {
     const id =
-      parseFootnoteId(el.id ?? '', 'fn') ||
+      parseGfmFootnoteId(el.id ?? '') ||
       el.getAttribute('data-lexical-footnote-def') ||
       '';
     if (!id) {
@@ -133,24 +132,33 @@ const FootnoteSectionImportRule = /* @__PURE__ */ defineImportRule({
 });
 
 /**
- * Word: `<div style="mso-element:footnote" id="ftn1"><p>…</p></div>`.
- * The id alone (`ftn1`) is too generic for arbitrary web pages, so a Word
- * marker — the mso-element style or an MsoFootnoteText paragraph — is
- * required as well.
+ * The footnote number when `el` is a Word footnote body
+ * (`<div id="ftn1">` holding MsoFootnoteText), else null. The id alone is
+ * too generic for arbitrary pages, so a Word marker is required too —
+ * the class rather than only the mso-element style, because Safari's
+ * clipboard sanitization strips mso-* style properties (classes survive).
  */
+function wordFootnoteNumber(el: Element): string | null {
+  if (el.tagName !== 'DIV') {
+    return null;
+  }
+  const match = WORD_DEF_ID.exec(el.id ?? '');
+  const isWordFootnote =
+    match !== null &&
+    (/mso-element:\s*footnote/.test(el.getAttribute('style') ?? '') ||
+      el.querySelector('.MsoFootnoteText') !== null);
+  return isWordFootnote ? match[1]! : null;
+}
+
 const WordDefinitionImportRule = /* @__PURE__ */ defineImportRule({
   $import: (ctx, el, $next) => {
-    const match = WORD_DEF_ID.exec(el.id ?? '');
-    const isWordFootnote =
-      match !== null &&
-      (/mso-element:\s*footnote/.test(el.getAttribute('style') ?? '') ||
-        el.querySelector('.MsoFootnoteText') !== null);
-    if (!isWordFootnote) {
+    const number = wordFootnoteNumber(el);
+    if (number === null) {
       return $next();
     }
     stripImportedBackrefs(el);
     const definition = $createFootnoteDefinitionNode(
-      resolveImportedId(ctx, `word:${match[1]}`),
+      resolveImportedId(ctx, `word:${number}`),
     );
     definition.splice(0, 0, ctx.$importChildren(el, {schema: BlockSchema}));
     return [definition];
@@ -159,33 +167,18 @@ const WordDefinitionImportRule = /* @__PURE__ */ defineImportRule({
   name: 'lexical-footnote/word-definition',
 });
 
-/** A direct child that is recognizably a Word footnote body. */
-function hasWordFootnoteChild(el: Element): boolean {
-  for (const child of Array.from(el.children)) {
-    if (
-      child.tagName === 'DIV' &&
-      WORD_DEF_ID.test(child.id ?? '') &&
-      child.querySelector('.MsoFootnoteText') !== null
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /**
- * Word wraps its notes (and their separator chrome: `<br clear=all>`,
- * `<hr>`) in `<div style="mso-element:footnote-list">`. Import only the
- * notes — the separator is the source app's rendering of the footnote
- * area, which this editor draws itself. Safari strips the mso-element
- * style from the container, so the structural check (does it hold Word
- * footnote divs?) stands in when the marker is missing.
+ * Word wraps its notes and their separator chrome (`<br clear=all><hr>`)
+ * in `<div style="mso-element:footnote-list">`; when Safari has stripped
+ * that style, a container holding Word footnote divs is recognized
+ * structurally. The separator is the source app's rendering of the
+ * footnote area, not content — import only the notes.
  */
 const WordFootnoteListImportRule = /* @__PURE__ */ defineImportRule({
   $import: (ctx, el, $next) => {
     const isFootnoteList =
       /mso-element:\s*footnote-list/.test(el.getAttribute('style') ?? '') ||
-      hasWordFootnoteChild(el);
+      Array.from(el.children).some(child => wordFootnoteNumber(child) !== null);
     if (!isFootnoteList) {
       return $next();
     }
