@@ -1,6 +1,6 @@
 {
   "name": "lexical-footnote",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "GFM footnote extension for Lexical — footnote refs, definitions, in-page links, and mdast markdown round-trip",
   "type": "module",
   "main": "./dist/index.js",
