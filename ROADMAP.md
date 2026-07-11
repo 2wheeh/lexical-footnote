@@ -1,7 +1,7 @@
 # Roadmap
 
-Experimental POC tracking `lexical@0.47.x`. Nothing here is a commitment —
-if something matters to you, open an issue so it gets prioritized.
+Beta, tracking `lexical@0.47.x`. Nothing here is a commitment — if something
+matters to you, open an issue so it gets prioritized.
 
 ## Customization & API
 

@@ -4,9 +4,9 @@ GFM footnotes for [Lexical](https://lexical.dev): superscript cues, an
 auto-managed notes section, in-page navigation, GitHub-compatible HTML
 export/import, and exact markdown round-trip via `@lexical/mdast`.
 
-> **Status: experimental POC.** Built against `lexical@0.47.0` and its
+> **Status: beta, actively developed.** Built on `lexical@0.47.0`'s
 > experimental extension / mdast / DOM-import / named-slot APIs, which may
-> break between releases. Pin your lexical version.
+> break between releases — pin your lexical version.
 > [ROADMAP.md](./ROADMAP.md) has what's planned.
 
 ## Model
