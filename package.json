@@ -1,0 +1,64 @@
+{
+  "name": "lexical-footnote",
+  "version": "0.1.0",
+  "description": "GFM footnote extension for Lexical — footnote refs, definitions, in-page links, and mdast markdown round-trip",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "dev": "vite",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "lexical",
+    "footnote",
+    "gfm",
+    "mdast",
+    "markdown",
+    "editor"
+  ],
+  "author": "2wheeh",
+  "license": "MIT",
+  "peerDependencies": {
+    "@lexical/extension": "~0.47.0",
+    "@lexical/react": "~0.47.0",
+    "@lexical/utils": "~0.47.0",
+    "lexical": "~0.47.0",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@lexical/extension": "0.47.0",
+    "@lexical/history": "0.47.0",
+    "@lexical/react": "0.47.0",
+    "@lexical/rich-text": "0.47.0",
+    "@lexical/utils": "0.47.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "happy-dom": "^18.0.1",
+    "lexical": "0.47.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tsdown": "^0.22.4",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4"
+  },
+  "packageManager": "pnpm@10.34.4"
+}
