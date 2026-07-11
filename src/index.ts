@@ -8,6 +8,7 @@ export {
   $getFirstFootnoteRef,
   $getFootnoteDefinition,
   $getFootnoteSection,
+  $removeFootnote,
   FootnoteExtension,
   INSERT_FOOTNOTE_COMMAND,
 } from './FootnoteExtension';

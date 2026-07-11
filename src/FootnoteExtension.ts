@@ -116,6 +116,21 @@ function mapsEqual(
   return true;
 }
 
+/**
+ * Removes every ref with this id and its definition. This is the explicit
+ * "delete footnote" operation; merely deleting a definition in the editor
+ * leaves its refs dangling (they heal an empty definition when next
+ * touched).
+ */
+export function $removeFootnote(footnoteId: string): void {
+  for (const {node} of $dfs()) {
+    if ($isFootnoteRefNode(node) && node.getFootnoteId() === footnoteId) {
+      node.remove();
+    }
+  }
+  $getFootnoteDefinition(footnoteId)?.remove();
+}
+
 function $insertFootnote(): void {
   const selection = $getSelection();
   if (!$isRangeSelection(selection)) {
