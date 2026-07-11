@@ -14,6 +14,7 @@ export {
   $removeFootnoteDefinition,
   FootnoteExtension,
   INSERT_FOOTNOTE_COMMAND,
+  type FootnoteConfig,
 } from './FootnoteExtension';
 export {backrefLabel, backrefTargetId} from './gfm';
 // A note can be cited many times: `$getFootnoteRefs` returns every cue for it,

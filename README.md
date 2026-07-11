@@ -104,21 +104,45 @@ data-footnotes><ol><li id="fn-id">` block with `data-footnote-backref`
 links — so exported documents have working anchors on static pages. Import
 rules accept both this output and GitHub's `user-content-` prefixed HTML.
 
+A note cited more than once gets a backref per cue: repeat cues are
+suffixed (`fnref-id-2`), and the second backref onwards shows its index
+(`↩`, `↩²`). The section opens with a visually-hidden
+`<h2 id="footnote-label">`, which every cue's `aria-describedby` points at.
+
+One deliberate difference from GitHub: a definition nothing refers to is
+still exported. This is a document editor, so an orphan note is content
+someone wrote and dropping it would be silent data loss. If your HTML is a
+rendering rather than a document, opt into GitHub's behavior:
+
+```ts
+configExtension(FootnoteExtension, {dropOrphansOnExport: true});
+```
+
+Markdown export is unaffected either way — GFM permits an orphan definition
+in the source, and only its HTML rendering discards it.
+
 ## Behavior notes
 
 - Inserting a footnote keeps selected text and places the marker after the
   selection (Word/tiptap semantics), then moves the caret into the new
   definition.
-- Deleting a ref keeps its definition as an orphan so a plain undo restores
-  everything; call `cleanupOrphans()` (output API) or
-  `$cleanupOrphanFootnotes()` to permanently discard unreferenced
-  definitions — it returns `true` when anything was removed. Use
-  `$removeFootnote(id)` to remove refs and definition together.
-- Deleting a definition deletes its refs in the same update (undo restores
-  both) — deleting the definition means deleting the footnote. Refs that
-  become dangling some other way (e.g. pasted markers) heal an empty
+- Deleting a cue keeps its definition as an orphan: the deletion stays
+  recoverable, and a cut cue can be pasted back onto its note. Call
+  `cleanupOrphans()` (output API) or `$cleanupOrphanFootnotes()` to
+  permanently discard unreferenced definitions — it returns `true` when
+  anything was removed. Use `$removeFootnote(id)` to remove cues and
+  definition together.
+- Deleting a definition deletes its cues in the same update (undo restores
+  both) — deleting the definition means deleting the footnote. Emptying a
+  note and deleting again is how you delete one from the keyboard; a
+  definition is a slot value, so no caret in the body can reach it. Cues
+  that become dangling some other way (e.g. pasted markers) heal an empty
   definition, so references without content always render as numbered
   entries.
+- Emptying the whole document removes the notes section with it — notes
+  annotate a document, and there is no longer one. A document that merely
+  *arrives* with no cues (an import of nothing but definitions) is left
+  alone.
 - Backspace/delete at a cue boundary selects the cue first instead of
   deleting it outright (Word/Notion behavior); a second delete removes it.
 - Multiple refs to one id are valid (GFM) and share a number. This differs

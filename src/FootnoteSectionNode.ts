@@ -1,3 +1,4 @@
+import {$getPeerDependency} from '@lexical/extension';
 import {$appendNodeToHTML, domOverride} from '@lexical/html';
 import {
   $create,
@@ -8,6 +9,7 @@ import {
   type LexicalNode,
 } from 'lexical';
 
+import type {FootnoteExtension} from './FootnoteExtension';
 import {FOOTNOTE_LABEL_ID} from './gfm';
 import {$computeFootnoteNumbers, orderFootnoteIds} from './numbering';
 import {
@@ -72,11 +74,22 @@ export class FootnoteSectionNode extends ElementNode {
     section.appendChild(list);
 
     const numbers = $computeFootnoteNumbers();
-    // Orphans included, unlike GitHub — which drops any definition nothing
-    // refers to. Our HTML is a document format, not just a rendering: an
+    // Orphans are kept, unlike GitHub — which drops any definition nothing
+    // refers to. Our HTML is a document format, not only a rendering: an
     // orphan note is content the user wrote, and losing it on export would be
-    // silent data loss. $cleanupOrphanFootnotes is how they go, deliberately.
-    const ids = $getDefinitionEntries(this).map(entry => entry.footnoteId);
+    // silent data loss. `dropOrphansOnExport` opts into GitHub's behavior for
+    // consumers whose HTML *is* the rendering.
+    //
+    // Looked up by name, with the extension imported for its type only: a
+    // value import would close a cycle — the extension eagerly references the
+    // render override below — and which module the bundler evaluated first
+    // would decide whether that throws.
+    const dropOrphans =
+      $getPeerDependency<typeof FootnoteExtension>('lexical-footnote/Footnote')
+        ?.config.dropOrphansOnExport ?? false;
+    const ids = $getDefinitionEntries(this)
+      .map(entry => entry.footnoteId)
+      .filter(id => !dropOrphans || numbers.has(id));
     for (const footnoteId of orderFootnoteIds(ids, numbers)) {
       const definition = $getDefinitionSlot(this, footnoteId);
       if (definition) {

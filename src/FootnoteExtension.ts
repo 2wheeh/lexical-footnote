@@ -456,7 +456,26 @@ function $selectRefOnDeleteCharacter(isBackward: boolean): boolean {
   return true;
 }
 
+export interface FootnoteConfig {
+  /**
+   * Leave definitions nothing refers to out of the exported HTML, as GitHub
+   * does when it renders. Off by default: this is a document editor, and an
+   * orphan note is content the user wrote — dropping it from the model's own
+   * serialization would be silent data loss. Turn it on when the HTML is a
+   * rendering rather than a document, and you want byte-parity with GitHub.
+   *
+   * Markdown export is unaffected either way. GFM permits an orphan
+   * definition in the source; it is only the HTML rendering that discards it.
+   */
+  dropOrphansOnExport: boolean;
+}
+
+// Annotated, not `satisfies`: the latter would narrow the default to the
+// literal `false`, and the config could then never be set to anything else.
+const DEFAULT_CONFIG: FootnoteConfig = {dropOrphansOnExport: false};
+
 export const FootnoteExtension = defineExtension({
+  config: DEFAULT_CONFIG,
   dependencies: [
     CoreImportExtension,
     /* @__PURE__ */ configExtension(DOMImportExtension, {
