@@ -19,6 +19,7 @@ import {RichTextExtension} from '@lexical/rich-text';
 import {defineExtension} from 'lexical';
 
 import {FootnoteExtension} from '../src';
+import {FootnoteClipboardExtension} from '../src/clipboard';
 import {FootnoteMdastExtension} from '../src/mdast';
 
 const SAMPLE = `# lexical-footnote
@@ -51,6 +52,7 @@ const appExtension = defineExtension({
     MdastShortcutsExtension,
     MdastExportExtension,
     FootnoteExtension,
+    FootnoteClipboardExtension,
     FootnoteMdastExtension,
   ],
   name: 'lexical-footnote/dev',

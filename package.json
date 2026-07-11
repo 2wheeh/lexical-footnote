@@ -26,6 +26,16 @@
         "types": "./dist/mdast.d.cts",
         "default": "./dist/mdast.cjs"
       }
+    },
+    "./clipboard": {
+      "import": {
+        "types": "./dist/clipboard.d.ts",
+        "default": "./dist/clipboard.js"
+      },
+      "require": {
+        "types": "./dist/clipboard.d.cts",
+        "default": "./dist/clipboard.cjs"
+      }
     }
   },
   "engines": {
@@ -62,6 +72,7 @@
     "url": "https://github.com/2wheeh/lexical-footnote/issues"
   },
   "peerDependencies": {
+    "@lexical/clipboard": "~0.47.0",
     "@lexical/extension": "~0.47.0",
     "@lexical/html": "~0.47.0",
     "@lexical/mdast": "~0.47.0",
@@ -72,6 +83,9 @@
     "react-dom": ">=18"
   },
   "peerDependenciesMeta": {
+    "@lexical/clipboard": {
+      "optional": true
+    },
     "@lexical/mdast": {
       "optional": true
     }
@@ -81,6 +95,7 @@
     "micromark-extension-gfm-footnote": "^2.1.0"
   },
   "devDependencies": {
+    "@lexical/clipboard": "0.47.0",
     "@lexical/extension": "0.47.0",
     "@lexical/history": "0.47.0",
     "@lexical/html": "0.47.0",

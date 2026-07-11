@@ -70,6 +70,20 @@ import {FootnoteMdastExtension} from 'lexical-footnote/mdast';
 (micromark-extension-gfm-footnote under the hood). Definitions declared
 anywhere in the source are normalized into the section.
 
+### Clipboard (optional)
+
+```ts
+import {FootnoteClipboardExtension} from 'lexical-footnote/clipboard';
+```
+
+Lexical's default paste path uses the legacy static-importDOM converter and
+never consults rule-based import. This extension routes `text/html` pastes
+through the DOMImportExtension pipeline, so pasting from **Word**, **Google
+Docs**, GitHub, or another lexical-footnote editor produces real footnotes
+(with fresh ids — a paste can't collide with or merge into existing notes).
+Opt-in because it reroutes all HTML pastes for the editor, not just
+footnote content.
+
 ### HTML
 
 `exportDOM` mirrors GitHub's footnote HTML — `<sup><a data-footnote-ref

@@ -15,6 +15,9 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
     devDependencies:
+      '@lexical/clipboard':
+        specifier: 0.47.0
+        version: 0.47.0(typescript@5.9.3)
       '@lexical/extension':
         specifier: 0.47.0
         version: 0.47.0(typescript@5.9.3)

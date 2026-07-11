@@ -12,6 +12,10 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
+import {ClipboardImportExtension} from '@lexical/clipboard';
+import {$getSelection, $isRangeSelection} from 'lexical';
+
+import {FootnoteClipboardExtension} from './clipboard';
 import {$isFootnoteDefinitionNode} from './FootnoteDefinitionNode';
 import {$getFootnoteSection, FootnoteExtension} from './FootnoteExtension';
 import {$createFootnoteRefNode, $isFootnoteRefNode} from './FootnoteRefNode';
@@ -125,6 +129,58 @@ describe('word/google-docs clipboard import', () => {
     // two import passes must not share generated ids
     expect(new Set(refIds).size).toBe(2);
     expect(defIds).toHaveLength(2);
+  });
+
+  it('routes real clipboard pastes through the import rules (FootnoteClipboardExtension)', () => {
+    const pasteEditor = buildEditorFromExtensions({
+      dependencies: [FootnoteClipboardExtension],
+      name: 'paste-root',
+      namespace: 'paste',
+    });
+    const {$insertDataTransfer} = getExtensionDependencyFromEditor(
+      pasteEditor,
+      ClipboardImportExtension,
+    ).output;
+    const dataTransfer = {
+      getData: (type: string) => (type === 'text/html' ? WORD_HTML : ''),
+      types: ['text/html'],
+    } as unknown as DataTransfer;
+
+    pasteEditor.update(
+      () => {
+        const p = $createParagraphNode().append($createTextNode('target '));
+        $getRoot().clear().append(p);
+        p.selectEnd();
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          $insertDataTransfer(dataTransfer, selection);
+        }
+      },
+      {discrete: true},
+    );
+
+    pasteEditor.read(() => {
+      const refs: string[] = [];
+      for (const child of $getRoot().getChildren()) {
+        if ($isParagraphNode(child)) {
+          for (const inline of child.getChildren()) {
+            if ($isFootnoteRefNode(inline)) {
+              refs.push(inline.getFootnoteId());
+            }
+          }
+        }
+      }
+      expect(refs).toHaveLength(1);
+      const defs =
+        $getFootnoteSection()
+          ?.getChildren()
+          .filter($isFootnoteDefinitionNode) ?? [];
+      expect(defs.map(def => def.getFootnoteId())).toEqual(refs);
+      expect(defs[0]!.getTextContent()).toContain(
+        'The footnote body from Word.',
+      );
+    });
+    pasteEditor.dispose();
   });
 
   it('assigns fresh ids so a paste cannot collide with existing footnotes', () => {
