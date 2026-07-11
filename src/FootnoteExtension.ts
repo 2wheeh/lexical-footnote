@@ -4,7 +4,7 @@ import {
   DOMImportExtension,
   DOMRenderExtension,
 } from '@lexical/html';
-import {$dfs, mergeRegister} from '@lexical/utils';
+import {mergeRegister} from '@lexical/utils';
 import {
   $caretFromPoint,
   $createNodeSelection,
@@ -94,10 +94,6 @@ export function $getFootnoteDefinition(
 ): FootnoteDefinitionNode | null {
   const section = $getFootnoteSection();
   return section ? $getDefinitionSlot(section, footnoteId) : null;
-}
-
-export function $getFirstFootnoteRef(footnoteId: string): FootnoteRefNode | null {
-  return $getFootnoteRefs(footnoteId)[0] ?? null;
 }
 
 /** Definition ids in display order (referenced by number, then orphans). */
@@ -506,25 +502,12 @@ export const FootnoteExtension = defineExtension({
     };
     // Returns the definition whose very end the collapsed selection sits at.
     const $definitionAtSelectionEnd = (): FootnoteDefinitionNode | null => {
+      const definition = $definitionAtSelection();
       const selection = $getSelection();
-      if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+      if (!definition || !$isRangeSelection(selection)) {
         return null;
       }
       const anchor = selection.anchor;
-      let definition: FootnoteDefinitionNode | null = null;
-      for (
-        let node: ReturnType<typeof anchor.getNode> | null = anchor.getNode();
-        node;
-        node = node.getParent()
-      ) {
-        if ($isFootnoteDefinitionNode(node)) {
-          definition = node;
-          break;
-        }
-      }
-      if (!definition) {
-        return null;
-      }
       const anchorNode = anchor.getNode();
       const last = definition.getLastDescendant() ?? definition;
       if (anchor.type === 'text') {

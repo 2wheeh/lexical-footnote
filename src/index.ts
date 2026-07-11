@@ -6,7 +6,6 @@ export {
 export {
   $cleanupOrphanFootnotes,
   $computeFootnoteNumbers,
-  $getFirstFootnoteRef,
   $getFootnoteDefinition,
   $getFootnoteDefinitions,
   $getFootnoteSection,
@@ -16,7 +15,10 @@ export {
   FootnoteExtension,
   INSERT_FOOTNOTE_COMMAND,
 } from './FootnoteExtension';
-export {orderFootnoteIds} from './numbering';
+export {backrefLabel, backrefTargetId} from './gfm';
+// A note can be cited many times: `$getFootnoteRefs` returns every cue for it,
+// in document order.
+export {$getFootnoteRefs, orderFootnoteIds} from './numbering';
 export {
   $getDefinitionEntries,
   $getDefinitionSlot,

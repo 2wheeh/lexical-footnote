@@ -94,9 +94,10 @@ export class FootnoteSectionNode extends ElementNode {
  * the notes render without any listener, rAF, or imperative mount — and
  * nothing races the reconciler for ownership of the host's DOM.
  *
- * DOM order here is slot-map order (code-unit); display order comes from
- * `--order` on each item, which the extension keeps in sync with the
- * derived numbering.
+ * The `<li>`s are the extension's, not the reconciler's — it owns only the
+ * container inside — so the extension is what numbers them, orders them, and
+ * reclaims them when a definition goes. DOM order here is slot-map order
+ * (code-unit), which is not display order.
  */
 export const FootnoteSectionRenderOverride = /* @__PURE__ */ domOverride(
   [FootnoteSectionNode],
