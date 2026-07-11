@@ -4,6 +4,7 @@ export {
   FootnoteDefinitionNode,
 } from './FootnoteDefinitionNode';
 export {
+  $cleanupOrphanFootnotes,
   $computeFootnoteNumbers,
   $getFirstFootnoteRef,
   $getFootnoteDefinition,

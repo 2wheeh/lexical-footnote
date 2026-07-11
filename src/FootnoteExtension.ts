@@ -131,10 +131,40 @@ export function $removeFootnote(footnoteId: string): void {
   $getFootnoteDefinition(footnoteId)?.remove();
 }
 
+/**
+ * Removes definitions that no ref points to. Orphans are otherwise kept
+ * (so a plain undo after deleting a ref restores everything); this is the
+ * explicit, permanent cleanup — mirroring tiptap's cleanupOrphanFootnotes.
+ *
+ * @returns true when at least one orphaned definition was removed.
+ */
+export function $cleanupOrphanFootnotes(): boolean {
+  const section = $getFootnoteSection();
+  if (!section) {
+    return false;
+  }
+  const numbers = $computeFootnoteNumbers();
+  let removed = false;
+  for (const child of section.getChildren()) {
+    if ($isFootnoteDefinitionNode(child) && !numbers.has(child.getFootnoteId())) {
+      child.remove();
+      removed = true;
+    }
+  }
+  return removed;
+}
+
 function $insertFootnote(): void {
   const selection = $getSelection();
   if (!$isRangeSelection(selection)) {
     return;
+  }
+  // Word/tiptap semantics: selected text is kept and the marker goes after
+  // the selection, so collapse to the end instead of replacing.
+  if (!selection.isCollapsed()) {
+    const end = selection.isBackward() ? selection.anchor : selection.focus;
+    selection.anchor.set(end.key, end.offset, end.type);
+    selection.focus.set(end.key, end.offset, end.type);
   }
   const id = createFootnoteId();
   selection.insertNodes([$createFootnoteRefNode(id)]);
@@ -304,6 +334,16 @@ export const FootnoteExtension = defineExtension({
   build: (editor: LexicalEditor) => {
     const numbers = signal<ReadonlyMap<string, number>>(new Map());
     return {
+      cleanupOrphans: (): boolean => {
+        let removed = false;
+        editor.update(
+          () => {
+            removed = $cleanupOrphanFootnotes();
+          },
+          {discrete: true},
+        );
+        return removed;
+      },
       gotoDefinition: (footnoteId: string) =>
         gotoDefinition(editor, footnoteId),
       gotoRef: (footnoteId: string) => gotoRef(editor, footnoteId),

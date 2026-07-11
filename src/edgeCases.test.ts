@@ -11,11 +11,15 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {$isFootnoteDefinitionNode} from './FootnoteDefinitionNode';
+import {
+  $createFootnoteDefinitionNode,
+  $isFootnoteDefinitionNode,
+} from './FootnoteDefinitionNode';
 import {
   $getFootnoteSection,
   $removeFootnote,
   FootnoteExtension,
+  INSERT_FOOTNOTE_COMMAND,
 } from './FootnoteExtension';
 import {$createFootnoteRefNode, $isFootnoteRefNode} from './FootnoteRefNode';
 
@@ -131,6 +135,58 @@ describe('edge cases', () => {
     });
     expect(getNumbers().has('rm')).toBe(false);
     expect(getNumbers().get('keep')).toBe(1);
+  });
+
+  it('cleanupOrphans removes only unreferenced definitions', () => {
+    editor.update(
+      () => {
+        const p = $createParagraphNode().append(
+          $createTextNode('x'),
+          $createFootnoteRefNode('live'),
+        );
+        const orphan = $createFootnoteDefinitionNode('dead');
+        orphan.append($createParagraphNode());
+        $getRoot().clear().append(p, orphan);
+      },
+      {discrete: true},
+    );
+    const {cleanupOrphans} = getExtensionDependencyFromEditor(
+      editor,
+      FootnoteExtension,
+    ).output;
+    expect(cleanupOrphans()).toBe(true);
+    editor.read(() => {
+      const ids = $getFootnoteSection()!
+        .getChildren()
+        .filter($isFootnoteDefinitionNode)
+        .map(d => d.getFootnoteId());
+      expect(ids).toEqual(['live']);
+    });
+    expect(cleanupOrphans()).toBe(false);
+  });
+
+  it('keeps selected text and inserts the marker after it (Word semantics)', () => {
+    editor.update(
+      () => {
+        const p = $createParagraphNode();
+        const text = $createTextNode('select me');
+        p.append(text);
+        $getRoot().clear().append(p);
+        text.select(0, 9);
+      },
+      {discrete: true},
+    );
+    editor.dispatchCommand(INSERT_FOOTNOTE_COMMAND, undefined);
+    editor.read(() => {
+      const p = $getRoot().getFirstChild();
+      expect($isParagraphNode(p)).toBe(true);
+      if (!$isParagraphNode(p)) {
+        return;
+      }
+      expect(p.getTextContent()).toContain('select me');
+      const children = p.getChildren();
+      expect($isFootnoteRefNode(children[children.length - 1])).toBe(true);
+    });
   });
 
   it('removes the section when the last footnote is removed', () => {

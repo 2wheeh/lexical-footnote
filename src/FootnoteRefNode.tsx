@@ -96,7 +96,7 @@ function FootnoteRefComponent({footnoteId}: {footnoteId: string}) {
         type="button"
         onClick={() => gotoDefinition(footnoteId)}
         aria-label={`Go to footnote ${number ?? footnoteId}`}>
-        [{number ?? '?'}]
+        {number ?? '?'}
       </button>
     </sup>
   );

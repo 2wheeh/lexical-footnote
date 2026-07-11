@@ -77,12 +77,36 @@ rules accept both this output and GitHub's `user-content-` prefixed HTML.
 
 ## Behavior notes
 
-- Deleting a definition in the editor leaves its refs dangling; a dangling
-  ref heals an empty definition when next modified. Use
+- Inserting a footnote keeps selected text and places the marker after the
+  selection (Word/tiptap semantics), then moves the caret into the new
+  definition.
+- Deleting a ref keeps its definition as an orphan so a plain undo restores
+  everything; call `cleanupOrphans()` (output API) or
+  `$cleanupOrphanFootnotes()` to permanently discard unreferenced
+  definitions — it returns `true` when anything was removed. Use
   `$removeFootnote(id)` to remove refs and definition together.
-- Multiple refs to one id are valid (GFM) and share a number.
+- Deleting a definition leaves its refs dangling; a dangling ref heals an
+  empty definition when next modified (references without content always
+  render as numbered entries).
+- Multiple refs to one id are valid (GFM) and share a number. This differs
+  from tiptap/Word, which duplicate the footnote on paste — GFM semantics
+  keep markdown round-trip exact.
 - The definitions section is pinned to the end of the document; content
   typed after it is moved above it.
+
+## vs. tiptap Pages footnotes
+
+[tiptap Pages footnotes](https://tiptap.dev/docs/pages/core-concepts/footnotes)
+render per **page**, above the page footer — a feature of their pagination
+engine, with footnote content stored outside the document and edited in a
+separate scoped editor. Lexical has no page/header/footer concept, so that
+placement is not reproducible; a continuous document collects notes at the
+end, which tiptap itself calls
+[endnotes](https://tiptap.dev/docs/pages/core-concepts/endnotes). This
+package is the endnotes/GFM shape with the same behavioral guarantees:
+computed continuous numbering (never stored), insert-after-selection,
+click-to-scroll navigation, undo-safe orphan retention with an explicit
+cleanup command, and empty notes that render and heal.
 
 ## Development
 

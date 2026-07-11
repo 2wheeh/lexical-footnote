@@ -42,7 +42,8 @@ const appExtension = defineExtension({
 });
 
 function Toolbar() {
-  const {insertFootnote} = useExtensionDependency(FootnoteExtension).output;
+  const {insertFootnote, cleanupOrphans} =
+    useExtensionDependency(FootnoteExtension).output;
   const [editor] = useLexicalComposerContext();
   const [markdown, setMarkdown] = useState('');
   return (
@@ -50,6 +51,9 @@ function Toolbar() {
       <div className="toolbar">
         <button type="button" onClick={insertFootnote}>
           Insert footnote
+        </button>
+        <button type="button" onClick={cleanupOrphans}>
+          Clean up orphans
         </button>
         <button
           type="button"
