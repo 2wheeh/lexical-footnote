@@ -449,15 +449,32 @@ export const FootnoteExtension = defineExtension({
       if (!li) {
         return;
       }
-      // The backref is a ::after pseudo-element (and the number a ::marker),
-      // so those clicks land on the pseudo's owner (li / content div);
-      // clicks on the note's text land on deeper elements (spans) and fall
-      // through to editing.
-      const isChrome =
-        target === li ||
-        (target instanceof HTMLElement &&
-          target.hasAttribute('data-lexical-footnote-content'));
-      if (!isChrome) {
+      // The backref is a ::after pseudo-element, so its clicks land on the
+      // pseudo's owner (li / content div) — but so do clicks on blank
+      // space around the note. Hit-test the pseudo's actual rendered zone:
+      // right after the content's last line box.
+      const content = li.querySelector('[data-lexical-footnote-content]');
+      if (!content || (target !== li && target !== content)) {
+        return;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(content);
+      const rects = range.getClientRects();
+      const lastRect =
+        rects.length > 0
+          ? rects[rects.length - 1]!
+          : content.getBoundingClientRect();
+      const fontSize =
+        Number.parseFloat(getComputedStyle(content).fontSize) || 16;
+      // Zone ≈ the ↩ glyph itself (0.25em margin + ~1em glyph): clicks on
+      // surrounding blank space must fall through to caret placement,
+      // especially for empty notes where everything is "blank".
+      const inBackrefZone =
+        event.clientY >= lastRect.top &&
+        event.clientY <= lastRect.bottom &&
+        event.clientX >= lastRect.right + fontSize * 0.2 &&
+        event.clientX <= lastRect.right + fontSize * 1.4;
+      if (!inBackrefZone) {
         return;
       }
       const footnoteId = li.getAttribute('data-lexical-footnote-def');
