@@ -16,7 +16,7 @@ import {
 } from 'lexical';
 
 import {FootnoteExtension} from './FootnoteExtension';
-import {backrefTargetId} from './gfm';
+import {backrefTargetId, FOOTNOTE_LABEL_ID} from './gfm';
 import {$computeFootnoteNumbers, $getFootnoteRefs} from './numbering';
 import {footnoteIdState} from './state';
 
@@ -76,7 +76,10 @@ export class FootnoteRefNode extends DecoratorTextNode {
     const anchor = document.createElement('a');
     anchor.setAttribute('href', `#fn-${id}`);
     anchor.setAttribute('id', backrefTargetId(id, occurrence));
-    anchor.setAttribute('data-footnote-ref', 'true');
+    anchor.setAttribute('data-footnote-ref', '');
+    // Names the bare number for a screen reader; the section exports the
+    // element this points at.
+    anchor.setAttribute('aria-describedby', FOOTNOTE_LABEL_ID);
     anchor.textContent = String(number ?? '?');
     sup.appendChild(anchor);
     return {element: sup};

@@ -9,6 +9,12 @@
  * importer accepts both.
  */
 
+/** The heading that names the notes section, and what each cue points at. */
+export const FOOTNOTE_LABEL_ID = 'footnote-label';
+
+/** GitHub's class on backref links; its own stylesheet hooks on this name. */
+export const BACKREF_CLASS = 'data-footnote-backref';
+
 /**
  * The DOM id of the nth cue for a footnote (1-based), and so the target its
  * backref points at. The first cue is unsuffixed; repeats are numbered, or

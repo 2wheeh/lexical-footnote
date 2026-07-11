@@ -10,7 +10,7 @@ import {
   type StateValueOrUpdater,
 } from 'lexical';
 
-import {backrefLabel, backrefTargetId} from './gfm';
+import {BACKREF_CLASS, backrefLabel, backrefTargetId} from './gfm';
 import {$computeFootnoteNumbers, $getFootnoteRefs} from './numbering';
 import {footnoteIdState} from './state';
 
@@ -81,7 +81,8 @@ export class FootnoteDefinitionNode extends ElementNode {
         for (let occurrence = 1; occurrence <= refCount; occurrence++) {
           const backref = document.createElement('a');
           backref.setAttribute('href', `#${backrefTargetId(id, occurrence)}`);
-          backref.setAttribute('data-footnote-backref', 'true');
+          backref.setAttribute('data-footnote-backref', '');
+          backref.setAttribute('class', BACKREF_CLASS);
           backref.setAttribute('aria-label', backrefLabel(number, occurrence));
           backref.append('↩');
           if (occurrence > 1) {

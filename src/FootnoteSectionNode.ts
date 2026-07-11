@@ -8,6 +8,7 @@ import {
   type LexicalNode,
 } from 'lexical';
 
+import {FOOTNOTE_LABEL_ID} from './gfm';
 import {$computeFootnoteNumbers, orderFootnoteIds} from './numbering';
 import {
   $getDefinitionEntries,
@@ -57,11 +58,24 @@ export class FootnoteSectionNode extends ElementNode {
    */
   exportDOM(editor: LexicalEditor): DOMExportOutput {
     const section = document.createElement('section');
-    section.setAttribute('data-footnotes', 'true');
+    section.setAttribute('data-footnotes', '');
+    section.setAttribute('class', 'footnotes');
+    // What every cue's aria-describedby points at. Visually hidden by the
+    // host's stylesheet (GitHub's is `sr-only`), so it names the section for
+    // a screen reader without adding a heading to the page.
+    const label = document.createElement('h2');
+    label.setAttribute('id', FOOTNOTE_LABEL_ID);
+    label.setAttribute('class', 'sr-only');
+    label.textContent = 'Footnotes';
+    section.appendChild(label);
     const list = document.createElement('ol');
     section.appendChild(list);
 
     const numbers = $computeFootnoteNumbers();
+    // Orphans included, unlike GitHub — which drops any definition nothing
+    // refers to. Our HTML is a document format, not just a rendering: an
+    // orphan note is content the user wrote, and losing it on export would be
+    // silent data loss. $cleanupOrphanFootnotes is how they go, deliberately.
     const ids = $getDefinitionEntries(this).map(entry => entry.footnoteId);
     for (const footnoteId of orderFootnoteIds(ids, numbers)) {
       const definition = $getDefinitionSlot(this, footnoteId);

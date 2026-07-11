@@ -78,14 +78,30 @@ describe('a footnote cited more than once', () => {
     );
   }
 
+  /** The exported HTML, as a DOM — assertions on shape, not on string form. */
+  function parse(html: string): HTMLElement {
+    const host = document.createElement('div');
+    host.innerHTML = html;
+    return host;
+  }
+
   it('gives every cue an id of its own', () => {
     seed();
     const html = editor.read(() => $generateHtmlFromNodes(editor));
 
-    expect(html).toContain('id="fnref-note"');
-    expect(html).toContain('id="fnref-note-2"');
-    // Both cues show the note's number, not their own occurrence.
-    expect(html.match(/data-footnote-ref="true">1</g)).toHaveLength(2);
+    const cues = parse(html).querySelectorAll('[data-footnote-ref]');
+
+    expect(Array.from(cues).map(cue => cue.id)).toEqual([
+      'fnref-note',
+      'fnref-note-2',
+      'fnref-other',
+    ]);
+    // Every cue shows the note's number, not its own occurrence.
+    expect(Array.from(cues).map(cue => cue.textContent)).toEqual([
+      '1',
+      '1',
+      '2',
+    ]);
   });
 
   it('exports one backref per cue, each pointing at its own cue', () => {
@@ -101,6 +117,17 @@ describe('a footnote cited more than once', () => {
     // The note cited once keeps its single, unsuffixed backref.
     expect(html).toContain('href="#fnref-other"');
     expect(html).not.toContain('href="#fnref-other-2"');
+  });
+
+  it('names the section for a screen reader, as GFM does', () => {
+    seed();
+    const html = editor.read(() => $generateHtmlFromNodes(editor));
+
+    // Every cue describes itself by the notes heading — a bare "1" says
+    // nothing on its own — so the heading has to be exported with them.
+    expect(html).toContain('<h2 id="footnote-label"');
+    expect(html.match(/aria-describedby="footnote-label"/g)).toHaveLength(3);
+    expect(html).toContain('class="data-footnote-backref"');
   });
 
   it('renders a backref button per cue, and drops one when a cue goes', () => {
