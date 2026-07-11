@@ -3,6 +3,7 @@ import type {JSX} from 'react';
 import {DecoratorTextNode} from '@lexical/extension';
 import {useExtensionDependency} from '@lexical/react/useExtensionComponent';
 import {useExtensionSignalValue} from '@lexical/react/useExtensionSignalValue';
+import {useLexicalNodeSelection} from '@lexical/react/useLexicalNodeSelection';
 import {
   $create,
   $getState,
@@ -72,7 +73,12 @@ export class FootnoteRefNode extends DecoratorTextNode {
   }
 
   decorate(): JSX.Element {
-    return <FootnoteRefComponent footnoteId={this.getFootnoteId()} />;
+    return (
+      <FootnoteRefComponent
+        footnoteId={this.getFootnoteId()}
+        nodeKey={this.getKey()}
+      />
+    );
   }
 }
 
@@ -86,12 +92,19 @@ export function $isFootnoteRefNode(
   return node instanceof FootnoteRefNode;
 }
 
-function FootnoteRefComponent({footnoteId}: {footnoteId: string}) {
+function FootnoteRefComponent({
+  footnoteId,
+  nodeKey,
+}: {
+  footnoteId: string;
+  nodeKey: string;
+}) {
   const numbers = useExtensionSignalValue(FootnoteExtension, 'numbers');
   const {gotoDefinition} = useExtensionDependency(FootnoteExtension).output;
+  const [isSelected] = useLexicalNodeSelection(nodeKey);
   const number = numbers.get(footnoteId);
   return (
-    <sup>
+    <sup className={isSelected ? 'lexical-footnote__ref--selected' : undefined}>
       <button
         type="button"
         onClick={() => gotoDefinition(footnoteId)}

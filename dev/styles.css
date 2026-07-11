@@ -81,8 +81,15 @@ body {
   margin: 0 0 0.25rem;
 }
 
-.lexical-footnote__definition-content > p:only-child {
+/* Last paragraph flows inline so the ↩ backref trails its final line */
+.lexical-footnote__definition-content > p:last-child {
   display: inline;
+}
+
+.lexical-footnote__ref--selected button {
+  background: #6366f1;
+  border-radius: 3px;
+  color: #fff;
 }
 
 [data-lexical-footnote-backref] {
