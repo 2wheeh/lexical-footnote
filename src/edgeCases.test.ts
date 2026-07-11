@@ -15,13 +15,12 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
+import {$createFootnoteDefinitionNode} from './FootnoteDefinitionNode';
 import {
-  $createFootnoteDefinitionNode,
-  $isFootnoteDefinitionNode,
-} from './FootnoteDefinitionNode';
-import {
+  $getFootnoteDefinitions,
   $getFootnoteSection,
   $removeFootnote,
+  $removeFootnoteDefinition,
   FootnoteExtension,
   INSERT_FOOTNOTE_COMMAND,
 } from './FootnoteExtension';
@@ -65,9 +64,7 @@ describe('edge cases', () => {
     expect(getNumbers().get('dup')).toBe(1);
     expect(getNumbers().size).toBe(1);
     editor.read(() => {
-      const defs = $getFootnoteSection()!
-        .getChildren()
-        .filter($isFootnoteDefinitionNode);
+      const defs = $getFootnoteDefinitions();
       expect(defs).toHaveLength(1);
     });
   });
@@ -98,9 +95,7 @@ describe('edge cases', () => {
         : [];
       expect(refs).toHaveLength(1);
       expect(refs[0]!.getFootnoteId()).toBe('json1');
-      const defs = $getFootnoteSection()!
-        .getChildren()
-        .filter($isFootnoteDefinitionNode);
+      const defs = $getFootnoteDefinitions();
       expect(defs).toHaveLength(1);
       expect(defs[0]!.getFootnoteId()).toBe('json1');
     });
@@ -131,9 +126,7 @@ describe('edge cases', () => {
         ? p.getChildren().filter($isFootnoteRefNode).map(r => r.getFootnoteId())
         : [];
       expect(ids).toEqual(['keep']);
-      const defIds = $getFootnoteSection()!
-        .getChildren()
-        .filter($isFootnoteDefinitionNode)
+      const defIds = $getFootnoteDefinitions()
         .map(d => d.getFootnoteId());
       expect(defIds).toEqual(['keep']);
     });
@@ -160,9 +153,7 @@ describe('edge cases', () => {
     ).output;
     expect(cleanupOrphans()).toBe(true);
     editor.read(() => {
-      const ids = $getFootnoteSection()!
-        .getChildren()
-        .filter($isFootnoteDefinitionNode)
+      const ids = $getFootnoteDefinitions()
         .map(d => d.getFootnoteId());
       expect(ids).toEqual(['live']);
     });
@@ -255,17 +246,9 @@ describe('edge cases', () => {
       },
       {discrete: true},
     );
-    editor.update(
-      () => {
-        const section = $getFootnoteSection()!;
-        for (const def of section.getChildren().filter($isFootnoteDefinitionNode)) {
-          if (def.getFootnoteId() === 'bye') {
-            def.remove();
-          }
-        }
-      },
-      {discrete: true},
-    );
+    // Definitions are slot values: they are removed through the slot map,
+    // not with node.remove() (a children-channel operation).
+    editor.update(() => $removeFootnoteDefinition('bye'), {discrete: true});
     editor.read(() => {
       const p = $getRoot().getFirstChild();
       const ids = $isParagraphNode(p)

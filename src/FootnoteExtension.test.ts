@@ -11,12 +11,10 @@ import {
 } from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {
-  $createFootnoteDefinitionNode,
-  $isFootnoteDefinitionNode,
-} from './FootnoteDefinitionNode';
+import {$createFootnoteDefinitionNode} from './FootnoteDefinitionNode';
 import {
   $getFootnoteDefinition,
+  $getFootnoteDefinitions,
   $getFootnoteSection,
   FootnoteExtension,
   INSERT_FOOTNOTE_COMMAND,
@@ -73,7 +71,7 @@ describe('FootnoteExtension', () => {
         : [];
       expect(refs).toHaveLength(1);
 
-      const defs = section!.getChildren().filter($isFootnoteDefinitionNode);
+      const defs = $getFootnoteDefinitions();
       expect(defs).toHaveLength(1);
       const id = defs[0]!.getFootnoteId();
       expect(id).not.toBe('');
@@ -100,11 +98,7 @@ describe('FootnoteExtension', () => {
     expect(numbers.get('aaa')).toBe(2);
 
     editor.read(() => {
-      const section = $getFootnoteSection();
-      expect(section).not.toBeNull();
-      const ids = section!
-        .getChildren()
-        .filter($isFootnoteDefinitionNode)
+      const ids = $getFootnoteDefinitions()
         .map(def => def.getFootnoteId());
       expect(ids).toEqual(['bbb', 'aaa']);
     });
@@ -133,12 +127,9 @@ describe('FootnoteExtension', () => {
       $getRoot().clear().append(p, orphan);
     });
     editor.read(() => {
-      // orphan def got relocated into the section
-      const section = $getFootnoteSection();
-      const ids = section!
-        .getChildren()
-        .filter($isFootnoteDefinitionNode)
-        .map(def => def.getFootnoteId());
+      // the orphan definition got slotted onto the section, after the
+      // referenced one (orphans sort last)
+      const ids = $getFootnoteDefinitions().map(def => def.getFootnoteId());
       expect(ids).toEqual(['used', 'orphan']);
     });
     const numbers = getNumbers();

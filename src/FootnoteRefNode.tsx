@@ -15,7 +15,8 @@ import {
   type StateValueOrUpdater,
 } from 'lexical';
 
-import {$computeFootnoteNumbers, FootnoteExtension} from './FootnoteExtension';
+import {FootnoteExtension} from './FootnoteExtension';
+import {$computeFootnoteNumbers} from './numbering';
 import {footnoteIdState} from './state';
 
 /**

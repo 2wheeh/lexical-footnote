@@ -8,11 +8,20 @@ export {
   $computeFootnoteNumbers,
   $getFirstFootnoteRef,
   $getFootnoteDefinition,
+  $getFootnoteDefinitions,
   $getFootnoteSection,
+  $getOrderedFootnoteIds,
   $removeFootnote,
+  $removeFootnoteDefinition,
   FootnoteExtension,
   INSERT_FOOTNOTE_COMMAND,
 } from './FootnoteExtension';
+export {orderFootnoteIds} from './numbering';
+export {
+  $getDefinitionEntries,
+  $getDefinitionSlot,
+  footnoteSlotName,
+} from './slots';
 export {
   $createFootnoteRefNode,
   $isFootnoteRefNode,

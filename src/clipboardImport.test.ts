@@ -17,8 +17,10 @@ import {HorizontalRuleExtension} from '@lexical/extension';
 import {$getSelection, $isRangeSelection} from 'lexical';
 
 import {FootnoteClipboardExtension} from './clipboard';
-import {$isFootnoteDefinitionNode} from './FootnoteDefinitionNode';
-import {$getFootnoteSection, FootnoteExtension} from './FootnoteExtension';
+import {
+  $getFootnoteDefinitions,
+  FootnoteExtension,
+} from './FootnoteExtension';
 import {$createFootnoteRefNode, $isFootnoteRefNode} from './FootnoteRefNode';
 
 /**
@@ -110,8 +112,7 @@ describe('word/google-docs clipboard import', () => {
         }
       }
       const defs =
-        $getFootnoteSection()?.getChildren().filter($isFootnoteDefinitionNode) ??
-        [];
+        $getFootnoteDefinitions();
       const bodyParagraph = root.getFirstChild();
       return {
         bodyText: $isParagraphNode(bodyParagraph)
@@ -200,9 +201,7 @@ describe('word/google-docs clipboard import', () => {
       }
       expect(refs).toHaveLength(1);
       const defs =
-        $getFootnoteSection()
-          ?.getChildren()
-          .filter($isFootnoteDefinitionNode) ?? [];
+        $getFootnoteDefinitions();
       expect(defs.map(def => def.getFootnoteId())).toEqual(refs);
       expect(defs[0]!.getTextContent()).toContain(
         'The footnote body from Word.',

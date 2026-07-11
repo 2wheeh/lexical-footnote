@@ -11,8 +11,10 @@ import {
 import {$getRoot, $isParagraphNode} from 'lexical';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
-import {$isFootnoteDefinitionNode} from './FootnoteDefinitionNode';
-import {$getFootnoteSection} from './FootnoteExtension';
+import {
+  $getFootnoteDefinitions,
+  $getFootnoteSection,
+} from './FootnoteExtension';
 import {$isFootnoteRefNode} from './FootnoteRefNode';
 import {FootnoteMdastExtension} from './mdast';
 
@@ -56,7 +58,7 @@ describe('mdast round-trip', () => {
 
       const section = $getFootnoteSection();
       expect(section).not.toBeNull();
-      const defs = section!.getChildren().filter($isFootnoteDefinitionNode);
+      const defs = $getFootnoteDefinitions();
       expect(defs).toHaveLength(1);
       expect(defs[0]!.getFootnoteId()).toBe('note');
       expect(defs[0]!.getTextContent()).toContain('the footnote body');
@@ -84,10 +86,7 @@ describe('mdast round-trip', () => {
     editor.update(() => $convertFromMarkdownString(source), {discrete: true});
 
     editor.read(() => {
-      const ids = $getFootnoteSection()!
-        .getChildren()
-        .filter($isFootnoteDefinitionNode)
-        .map(def => def.getFootnoteId());
+      const ids = $getFootnoteDefinitions().map(def => def.getFootnoteId());
       // reordered to match reference order
       expect(ids).toEqual(['b', 'a']);
     });
@@ -106,9 +105,7 @@ describe('mdast round-trip', () => {
       {discrete: true},
     );
     editor.read(() => {
-      const defs = $getFootnoteSection()!
-        .getChildren()
-        .filter($isFootnoteDefinitionNode);
+      const defs = $getFootnoteDefinitions();
       expect(defs).toHaveLength(1);
       expect(defs[0]!.getFootnoteId()).toBe('lonely');
     });

@@ -1,5 +1,9 @@
 import {signal} from '@lexical/extension';
-import {CoreImportExtension, DOMImportExtension} from '@lexical/html';
+import {
+  CoreImportExtension,
+  DOMImportExtension,
+  DOMRenderExtension,
+} from '@lexical/html';
 import {$dfs, mergeRegister} from '@lexical/utils';
 import {
   $caretFromPoint,
@@ -8,10 +12,12 @@ import {
   $getRoot,
   $getSelection,
   $getSiblingCaret,
+  $getSlotHost,
   $isElementNode,
   $isNodeSelection,
   $isRangeSelection,
   $isTextPointCaret,
+  $nodesOfType,
   $setSelection,
   COMMAND_PRIORITY_EDITOR,
   COMMAND_PRIORITY_LOW,
@@ -40,9 +46,19 @@ import {
   $createFootnoteSectionNode,
   $isFootnoteSectionNode,
   FootnoteSectionNode,
+  FootnoteSectionRenderOverride,
 } from './FootnoteSectionNode';
 import {FootnoteImportRules} from './htmlImport';
+import {$computeFootnoteNumbers, orderFootnoteIds} from './numbering';
+import {
+  $getDefinitionEntries,
+  $getDefinitionSlot,
+  $removeDefinitionSlot,
+  $setDefinitionSlot,
+} from './slots';
 import {createFootnoteId} from './state';
+
+export {$computeFootnoteNumbers} from './numbering';
 
 export const INSERT_FOOTNOTE_COMMAND: LexicalCommand<void> =
   /* @__PURE__ */ createCommand('INSERT_FOOTNOTE_COMMAND');
@@ -66,25 +82,17 @@ function $ensureFootnoteSection(): FootnoteSectionNode {
   return section;
 }
 
+/** O(1): the slot map is the definition map, keyed by footnote id. */
 export function $getFootnoteDefinition(
   footnoteId: string,
 ): FootnoteDefinitionNode | null {
   const section = $getFootnoteSection();
-  if (!section) {
-    return null;
-  }
-  for (const child of section.getChildren()) {
-    if (
-      $isFootnoteDefinitionNode(child) &&
-      child.getFootnoteId() === footnoteId
-    ) {
-      return child;
-    }
-  }
-  return null;
+  return section ? $getDefinitionSlot(section, footnoteId) : null;
 }
 
 export function $getFirstFootnoteRef(footnoteId: string): FootnoteRefNode | null {
+  // Order-sensitive (the FIRST ref), so this walks the body in document
+  // order rather than reading the unordered node map.
   for (const {node} of $dfs()) {
     if ($isFootnoteRefNode(node) && node.getFootnoteId() === footnoteId) {
       return node;
@@ -93,21 +101,33 @@ export function $getFirstFootnoteRef(footnoteId: string): FootnoteRefNode | null
   return null;
 }
 
+/** Definition ids in display order (referenced by number, then orphans). */
+export function $getOrderedFootnoteIds(): string[] {
+  const section = $getFootnoteSection();
+  if (!section) {
+    return [];
+  }
+  const ids = $getDefinitionEntries(section).map(entry => entry.footnoteId);
+  return orderFootnoteIds(ids, $computeFootnoteNumbers());
+}
+
 /**
- * Display numbers, derived from the document order of first references
- * (GFM numbering). Never stored on nodes.
+ * Every definition, in display order. Definitions are slot values on the
+ * section, so they are not reachable through `section.getChildren()`.
  */
-export function $computeFootnoteNumbers(): ReadonlyMap<string, number> {
-  const numbers = new Map<string, number>();
-  for (const {node} of $dfs()) {
-    if ($isFootnoteRefNode(node)) {
-      const id = node.getFootnoteId();
-      if (id && !numbers.has(id)) {
-        numbers.set(id, numbers.size + 1);
-      }
+export function $getFootnoteDefinitions(): FootnoteDefinitionNode[] {
+  const section = $getFootnoteSection();
+  if (!section) {
+    return [];
+  }
+  const definitions: FootnoteDefinitionNode[] = [];
+  for (const footnoteId of $getOrderedFootnoteIds()) {
+    const definition = $getDefinitionSlot(section, footnoteId);
+    if (definition) {
+      definitions.push(definition);
     }
   }
-  return numbers;
+  return definitions;
 }
 
 function mapsEqual(
@@ -131,13 +151,30 @@ function mapsEqual(
  * leaves its refs dangling (they heal an empty definition when next
  * touched).
  */
+/**
+ * Removes just the definition, leaving its refs behind — they are cleaned up
+ * by the same-update policy in $removeRefsOfDeletedDefs. Definitions are slot
+ * values, so `definition.remove()` (a children-channel operation) does not
+ * detach them; this is the way.
+ */
+export function $removeFootnoteDefinition(footnoteId: string): void {
+  const section = $getFootnoteSection();
+  if (section) {
+    $removeDefinitionSlot(section, footnoteId);
+  }
+}
+
 export function $removeFootnote(footnoteId: string): void {
-  for (const {node} of $dfs()) {
-    if ($isFootnoteRefNode(node) && node.getFootnoteId() === footnoteId) {
-      node.remove();
+  // Order-insensitive: read the node map instead of walking the tree.
+  for (const ref of $nodesOfType(FootnoteRefNode)) {
+    if (ref.getFootnoteId() === footnoteId) {
+      ref.remove();
     }
   }
-  $getFootnoteDefinition(footnoteId)?.remove();
+  const section = $getFootnoteSection();
+  if (section) {
+    $removeDefinitionSlot(section, footnoteId);
+  }
 }
 
 /**
@@ -154,9 +191,9 @@ export function $cleanupOrphanFootnotes(): boolean {
   }
   const numbers = $computeFootnoteNumbers();
   let removed = false;
-  for (const child of section.getChildren()) {
-    if ($isFootnoteDefinitionNode(child) && !numbers.has(child.getFootnoteId())) {
-      child.remove();
+  for (const {footnoteId} of $getDefinitionEntries(section)) {
+    if (!numbers.has(footnoteId)) {
+      $removeDefinitionSlot(section, footnoteId);
       removed = true;
     }
   }
@@ -181,7 +218,7 @@ function $insertFootnote(): void {
   const definition = $createFootnoteDefinitionNode(id);
   const paragraph = $createParagraphNode();
   definition.append(paragraph);
-  section.append(definition);
+  $setDefinitionSlot(section, id, definition);
   paragraph.selectStart();
 }
 
@@ -226,18 +263,16 @@ function gotoRef(editor: LexicalEditor, footnoteId: string): void {
 }
 
 /**
- * Definition lookup that also sees definitions not yet relocated into the
- * section (e.g. mid-import, before $defTransform has moved them).
+ * Definition lookup that also sees definitions not yet slotted — importers
+ * produce them as ordinary nodes, and $defTransform slots them on commit.
+ * Reads the node map, so it finds them in either channel.
  */
 function $findFootnoteDefinitionAnywhere(
   footnoteId: string,
 ): FootnoteDefinitionNode | null {
-  for (const {node} of $dfs()) {
-    if (
-      $isFootnoteDefinitionNode(node) &&
-      node.getFootnoteId() === footnoteId
-    ) {
-      return node;
+  for (const definition of $nodesOfType(FootnoteDefinitionNode)) {
+    if (definition.getFootnoteId() === footnoteId) {
+      return definition;
     }
   }
   return null;
@@ -253,18 +288,31 @@ function $refTransform(node: FootnoteRefNode): void {
   if (!$findFootnoteDefinitionAnywhere(id)) {
     const definition = $createFootnoteDefinitionNode(id);
     definition.append($createParagraphNode());
-    $ensureFootnoteSection().append(definition);
+    $setDefinitionSlot($ensureFootnoteSection(), id, definition);
   }
 }
 
+/**
+ * Definitions belong in the section's slot map, keyed by id. Importers append
+ * them as ordinary nodes wherever the source put them; `$setSlot` unlinks a
+ * node from its parent, so slotting one here relocates it. One definition per
+ * identifier needs no dedup pass: a slot name can only hold one node.
+ */
 function $defTransform(node: FootnoteDefinitionNode): void {
-  if (!node.getFootnoteId()) {
+  const id = node.getFootnoteId();
+  if (!id) {
     node.remove();
     return;
   }
-  const parent = node.getParent();
-  if (!$isFootnoteSectionNode(parent)) {
-    $ensureFootnoteSection().append(node);
+  const section = $ensureFootnoteSection();
+  if ($getSlotHost(node) !== section) {
+    const occupant = $getDefinitionSlot(section, id);
+    // A healed placeholder never wins over imported content.
+    if (occupant && occupant !== node && node.getTextContent().trim() === '') {
+      node.remove();
+      return;
+    }
+    $setDefinitionSlot(section, id, node);
     return;
   }
   if (node.isEmpty()) {
@@ -277,12 +325,12 @@ function $sectionTransform(node: FootnoteSectionNode): void {
     return;
   }
   const root = $getRoot();
-  // Single section: merge later duplicates into the first one.
+  // Single section: move a duplicate's definitions into the first one.
   const sections = root.getChildren().filter($isFootnoteSectionNode);
   const survivor = sections[0];
   if (survivor && node !== survivor) {
-    for (const child of node.getChildren()) {
-      survivor.append(child);
+    for (const {footnoteId, definition} of $getDefinitionEntries(node)) {
+      $setDefinitionSlot(survivor, footnoteId, definition);
     }
     node.remove();
     return;
@@ -291,44 +339,13 @@ function $sectionTransform(node: FootnoteSectionNode): void {
     root.append(node);
     return;
   }
+  // isEmpty() is slot-aware: true only when it holds no definitions either.
   if (node.isEmpty()) {
     node.remove();
     return;
   }
   if (root.getLastChild() !== node) {
     root.append(node);
-  }
-  // Dedupe by id (GFM: one definition per identifier). Prefer a definition
-  // with content over an empty auto-healed one.
-  const byId = new Map<string, FootnoteDefinitionNode>();
-  for (const def of node.getChildren().filter($isFootnoteDefinitionNode)) {
-    const id = def.getFootnoteId();
-    const kept = byId.get(id);
-    if (!kept) {
-      byId.set(id, def);
-    } else if (
-      kept.getTextContent().trim() === '' &&
-      def.getTextContent().trim() !== ''
-    ) {
-      kept.remove();
-      byId.set(id, def);
-    } else {
-      def.remove();
-    }
-  }
-  // Order definitions to match first-reference order; orphans keep their
-  // relative order at the end (GFM keeps unreferenced definitions).
-  const numbers = $computeFootnoteNumbers();
-  const definitions = node.getChildren().filter($isFootnoteDefinitionNode);
-  const desired = [...definitions].sort((a, b) => {
-    const an = numbers.get(a.getFootnoteId()) ?? Number.MAX_SAFE_INTEGER;
-    const bn = numbers.get(b.getFootnoteId()) ?? Number.MAX_SAFE_INTEGER;
-    return an - bn;
-  });
-  if (desired.some((def, i) => def !== definitions[i])) {
-    for (const def of desired) {
-      node.append(def);
-    }
   }
 }
 
@@ -407,6 +424,11 @@ export const FootnoteExtension = defineExtension({
     CoreImportExtension,
     /* @__PURE__ */ configExtension(DOMImportExtension, {
       rules: FootnoteImportRules,
+    }),
+    // Lets the reconciler attach each definition's slot container itself,
+    // in-commit — no imperative mount racing it for the section's DOM.
+    /* @__PURE__ */ configExtension(DOMRenderExtension, {
+      overrides: [FootnoteSectionRenderOverride],
     }),
   ],
   build: (editor: LexicalEditor) => {
@@ -502,16 +524,19 @@ export const FootnoteExtension = defineExtension({
         );
       });
     };
+    // Definitions are slot values: they have no siblings. Traversal follows
+    // the derived display order instead.
     const gotoNextDefinitionStart = (footnoteId: string) => {
       editor.focus(() => {
         editor.update(
           () => {
-            const definition = $getFootnoteDefinition(footnoteId);
-            const next = definition?.getNextSibling();
-            if ($isFootnoteDefinitionNode(next)) {
+            const ids = $getOrderedFootnoteIds();
+            const nextId = ids[ids.indexOf(footnoteId) + 1];
+            const next = nextId ? $getFootnoteDefinition(nextId) : null;
+            if (next) {
               next.selectStart();
             } else {
-              definition?.selectEnd();
+              $getFootnoteDefinition(footnoteId)?.selectEnd();
             }
           },
           {tag: 'footnote-navigation'},
@@ -522,9 +547,13 @@ export const FootnoteExtension = defineExtension({
       editor.focus(() => {
         editor.update(
           () => {
-            const definition = $getFootnoteDefinition(footnoteId);
-            const previous = definition?.getPreviousSibling();
-            if ($isFootnoteDefinitionNode(previous)) {
+            const ids = $getOrderedFootnoteIds();
+            const index = ids.indexOf(footnoteId);
+            const previousId = index > 0 ? ids[index - 1] : undefined;
+            const previous = previousId
+              ? $getFootnoteDefinition(previousId)
+              : null;
+            if (previous) {
               previous.selectEnd();
               return;
             }
@@ -622,12 +651,11 @@ export const FootnoteExtension = defineExtension({
       }
       const overlayRect = overlay.getBoundingClientRect();
       const seen = new Set<string>();
-      for (const li of Array.from(
+      for (const content of Array.from(
         rootElement.querySelectorAll('[data-lexical-footnote-def]'),
       )) {
-        const footnoteId = li.getAttribute('data-lexical-footnote-def');
-        const content = li.querySelector('[data-lexical-footnote-content]');
-        if (!footnoteId || !content) {
+        const footnoteId = content.getAttribute('data-lexical-footnote-def');
+        if (!footnoteId) {
           continue;
         }
         seen.add(footnoteId);
@@ -649,19 +677,57 @@ export const FootnoteExtension = defineExtension({
         }
       }
     };
-    const schedulePositionBackrefs = () => {
-      const rootElement = currentRoot;
-      if (!rootElement || !overlay) {
+    /**
+     * The reconciler owns the section's DOM (it creates each definition's
+     * `<li>` through the render override) — we only project the derived
+     * display order onto it. Slot-map order is code-unit order, so the list
+     * is a flex column ordered by `--order`, never by DOM position.
+     */
+    const syncSectionOrder = () => {
+      const {sectionKey, orderedIds} = editor.read(() => {
+        const section = $getFootnoteSection();
+        return {
+          orderedIds: $getOrderedFootnoteIds(),
+          sectionKey: section ? section.getKey() : null,
+        };
+      });
+      if (sectionKey === null) {
         return;
       }
+      const list = editor
+        .getElementByKey(sectionKey)
+        ?.querySelector('[data-lexical-footnote-list]');
+      if (!(list instanceof HTMLElement)) {
+        return;
+      }
+      orderedIds.forEach((footnoteId, index) => {
+        const item = list.querySelector(
+          `[data-lexical-footnote-item="${footnoteId}"]`,
+        );
+        if (item instanceof HTMLElement) {
+          item.style.setProperty('--order', String(index + 1));
+          item.style.order = String(index + 1);
+        }
+      });
+    };
+    const scheduleSectionSync = () => {
+      const rootElement = currentRoot;
+      if (!rootElement) {
+        return;
+      }
+      const run = () => {
+        if (currentRoot !== rootElement) {
+          return;
+        }
+        syncSectionOrder();
+        if (overlay) {
+          positionBackrefs(rootElement);
+        }
+      };
       if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => {
-          if (currentRoot === rootElement) {
-            positionBackrefs(rootElement);
-          }
-        });
+        requestAnimationFrame(run);
       } else {
-        positionBackrefs(rootElement);
+        run();
       }
     };
     const onRootKeydown = (event: KeyboardEvent) => {
@@ -712,24 +778,20 @@ export const FootnoteExtension = defineExtension({
     // deletes its refs, in the same update so undo restores both.
     let knownDefIds: ReadonlySet<string> = new Set();
     const $collectDefIds = (): ReadonlySet<string> => {
-      const ids = new Set<string>();
       const section = $getFootnoteSection();
-      if (section) {
-        for (const child of section.getChildren()) {
-          if ($isFootnoteDefinitionNode(child)) {
-            ids.add(child.getFootnoteId());
-          }
-        }
-      }
-      return ids;
+      return new Set(
+        section
+          ? $getDefinitionEntries(section).map(entry => entry.footnoteId)
+          : [],
+      );
     };
     const $removeRefsOfDeletedDefs = (): void => {
       const currentIds = $collectDefIds();
       for (const id of knownDefIds) {
         if (!currentIds.has(id)) {
-          for (const {node} of $dfs()) {
-            if ($isFootnoteRefNode(node) && node.getFootnoteId() === id) {
-              node.remove();
+          for (const ref of $nodesOfType(FootnoteRefNode)) {
+            if (ref.getFootnoteId() === id) {
+              ref.remove();
             }
           }
         }
@@ -751,6 +813,7 @@ export const FootnoteExtension = defineExtension({
         overlayElement.className = 'lexical-footnote__backref-overlay';
         rootElement.insertAdjacentElement('afterend', overlayElement);
         overlay = overlayElement;
+        syncSectionOrder();
         positionBackrefs(rootElement);
         removeRootHandlers = mergeRegister(
           registerEventListener(rootElement, 'keydown', onRootKeydown, {
@@ -781,7 +844,7 @@ export const FootnoteExtension = defineExtension({
       editor.registerUpdateListener(() => {
         recomputeNumbers();
         knownDefIds = editor.read($collectDefIds);
-        schedulePositionBackrefs();
+        scheduleSectionSync();
       }),
       editor.registerCommand(
         INSERT_FOOTNOTE_COMMAND,

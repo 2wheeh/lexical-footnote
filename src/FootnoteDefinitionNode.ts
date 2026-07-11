@@ -5,7 +5,6 @@ import {
   ElementNode,
   type DOMExportOutput,
   type EditorConfig,
-  type ElementDOMSlot,
   type LexicalNode,
   type StateConfigValue,
   type StateValueOrUpdater,
@@ -14,9 +13,10 @@ import {
 import {footnoteIdState} from './state';
 
 /**
- * A footnote definition (`[^id]: ...` in GFM). Holds arbitrary flow content
- * (paragraphs etc.) as children. Lives inside FootnoteSectionNode; the
- * FootnoteExtension transforms relocate stray definitions there.
+ * A footnote definition (`[^id]: ...` in GFM). Holds flow content
+ * (paragraphs) as its children, and is itself a slot value on
+ * FootnoteSectionNode — so it has no parent, and the extension mounts its
+ * DOM (an editable island) wherever the notes are rendered.
  */
 export class FootnoteDefinitionNode extends ElementNode {
   $config() {
@@ -37,41 +37,27 @@ export class FootnoteDefinitionNode extends ElementNode {
   }
 
   createDOM(config: EditorConfig): HTMLElement {
-    const li = document.createElement('li');
-    li.setAttribute('data-lexical-footnote-def', this.getFootnoteId());
-    li.className =
+    const element = document.createElement('div');
+    element.setAttribute('data-lexical-footnote-def', this.getFootnoteId());
+    element.className =
       (config.theme.footnoteDefinition as string | undefined) ||
       'lexical-footnote__definition';
-    const content = document.createElement('div');
-    content.className =
-      (config.theme.footnoteDefinitionContent as string | undefined) ||
-      'lexical-footnote__definition-content';
-    // The backref marker is an overlay button positioned after this div's
-    // last line (see FootnoteExtension). No unmanaged element may live
-    // inside the li: anything here becomes a target for caret movement
-    // (word-jump, ArrowDown) that Lexical then mis-resolves.
-    content.setAttribute('data-lexical-footnote-content', 'true');
-    li.append(content);
-    return li;
-  }
-
-  /** Children reconcile into the content wrapper, not the `<li>` itself. */
-  getDOMSlot(dom: HTMLElement): ElementDOMSlot<HTMLElement> {
-    const content = dom.firstElementChild;
-    return content instanceof HTMLElement
-      ? super.getDOMSlot(dom).withElement(content)
-      : super.getDOMSlot(dom);
+    return element;
   }
 
   updateDOM(): boolean {
     return false;
   }
 
+  canIndent(): false {
+    return false;
+  }
+
   /** GFM-style HTML: `<li id="fn-id">…<a href="#fnref-id" data-footnote-backref>↩</a></li>` */
   exportDOM(): DOMExportOutput {
     const id = this.getFootnoteId();
-    const li = document.createElement('li');
-    li.setAttribute('id', `fn-${id}`);
+    const item = document.createElement('li');
+    item.setAttribute('id', `fn-${id}`);
     return {
       // Mutates in place and returns undefined: returning the element itself
       // would trigger `element.replaceWith(element)` in the exporter.
@@ -89,12 +75,8 @@ export class FootnoteDefinitionNode extends ElementNode {
         }
         return undefined;
       },
-      element: li,
+      element: item,
     };
-  }
-
-  canIndent(): false {
-    return false;
   }
 }
 

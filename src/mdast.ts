@@ -24,6 +24,8 @@ import {
 import {FootnoteExtension} from './FootnoteExtension';
 import {$createFootnoteRefNode, FootnoteRefNode} from './FootnoteRefNode';
 import {FootnoteSectionNode} from './FootnoteSectionNode';
+import {$computeFootnoteNumbers, orderFootnoteIds} from './numbering';
+import {$getDefinitionEntries, $getDefinitionSlot} from './slots';
 
 const $importFootnoteReference: MdastImportHandler<FootnoteReference> =
   node => {
@@ -39,8 +41,8 @@ const $importFootnoteDefinition: MdastImportHandler<FootnoteDefinition> = (
   }
   const definition = $createFootnoteDefinitionNode(node.identifier);
   definition.append(...ctx.importChildren(node));
-  // The FootnoteExtension transforms relocate this into the section and
-  // order it by first reference, wherever the markdown declared it.
+  // Returned as an ordinary node wherever the markdown declared it;
+  // $defTransform slots it onto the section on commit.
   return definition;
 };
 
@@ -69,12 +71,32 @@ const $exportFootnoteDefinition: MdastExportHandler<FootnoteDefinitionNode> = (
   };
 };
 
-/** The section is invisible in markdown: it flattens to its definitions. */
+/**
+ * The section is invisible in markdown: it flattens to its definitions.
+ * Those are slot values, not children, so they are gathered from the slot
+ * map and emitted in derived reference order.
+ */
 const $exportFootnoteSection: MdastExportHandler<FootnoteSectionNode> = (
   node,
   ctx,
 ) => {
-  return ctx.exportChildren(node);
+  const numbers = $computeFootnoteNumbers();
+  const ids = $getDefinitionEntries(node).map(entry => entry.footnoteId);
+  const definitions: FootnoteDefinition[] = [];
+  for (const footnoteId of orderFootnoteIds(ids, numbers)) {
+    const definition = $getDefinitionSlot(node, footnoteId);
+    if (definition) {
+      definitions.push({
+        children: ctx.exportChildren(definition) as Array<
+          BlockContent | DefinitionContent
+        >,
+        identifier: footnoteId,
+        label: footnoteId,
+        type: 'footnoteDefinition',
+      });
+    }
+  }
+  return definitions;
 };
 
 /**

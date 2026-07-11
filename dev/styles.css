@@ -121,6 +121,24 @@ body {
   width: 8rem;
 }
 
+/* The reconciler creates the <li>s in slot-map (code-unit) order; the
+   extension projects the derived footnote order onto them via `order`. */
+[data-lexical-footnote-list] {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.lexical-footnote__item {
+  list-style: decimal;
+}
+
+.lexical-footnote__item::marker {
+  color: #6366f1;
+  font-weight: 600;
+}
+
 .lexical-footnote__definition {
   margin-bottom: 0.375rem;
 }
