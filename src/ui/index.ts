@@ -2,6 +2,7 @@ import {mergeRegister} from '@lexical/utils';
 import {registerEventListener, type LexicalEditor} from 'lexical';
 
 import {BackrefOverlay} from './backrefs';
+import {$deriveFootnotes} from './derived';
 import {registerFootnoteKeyboard} from './keyboard';
 import {syncSectionList} from './sectionList';
 
@@ -11,14 +12,20 @@ import {syncSectionList} from './sectionList';
  * all of it is rebuilt when the root element changes and torn down when the
  * editor goes.
  *
- * Structure is derived on commit, where the model is the truth. Only the
- * overlay's *position* waits for a frame, because that is the only part that
- * needs layout.
+ * Structure is derived on commit — from a single walk, shared by every
+ * consumer — where the model is the truth. Only the overlay's *position* waits
+ * for a frame, because that is the only part that needs layout.
  */
 export function registerFootnoteUI(editor: LexicalEditor): () => void {
   const overlay = new BackrefOverlay(editor);
   let currentRoot: HTMLElement | null = null;
   let removeRootHandlers: (() => void) | null = null;
+
+  const sync = () => {
+    const derived = editor.read($deriveFootnotes);
+    syncSectionList(editor, derived);
+    overlay.sync(derived.notes);
+  };
 
   const scheduleReposition = () => {
     const rootElement = currentRoot;
@@ -51,8 +58,7 @@ export function registerFootnoteUI(editor: LexicalEditor): () => void {
         return;
       }
       overlay.attach(rootElement);
-      syncSectionList(editor);
-      overlay.sync();
+      sync();
       overlay.position(rootElement);
       removeRootHandlers = mergeRegister(
         registerFootnoteKeyboard(editor, rootElement, overlay),
@@ -64,8 +70,7 @@ export function registerFootnoteUI(editor: LexicalEditor): () => void {
       );
     }),
     editor.registerUpdateListener(() => {
-      syncSectionList(editor);
-      overlay.sync();
+      sync();
       scheduleReposition();
     }),
   );

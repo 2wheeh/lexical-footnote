@@ -14,19 +14,14 @@ import {
   DELETE_CHARACTER_COMMAND,
   RootNode,
   type LexicalEditor,
-  type LexicalNode,
 } from 'lexical';
 
-import {
-  $isFootnoteDefinitionNode,
-  type FootnoteDefinitionNode,
-} from '../nodes/FootnoteDefinitionNode';
 import {$isFootnoteRefNode, FootnoteRefNode} from '../nodes/FootnoteRefNode';
 import {
   $getFootnoteSection,
   type FootnoteSectionNode,
 } from '../nodes/FootnoteSectionNode';
-import {$removeFootnoteDefinition} from './definitions';
+import {$definitionAtSelection, $removeFootnoteDefinition} from './definitions';
 import {$getDefinitionEntries} from './slots';
 
 /**
@@ -45,24 +40,6 @@ import {$getDefinitionEntries} from './slots';
  * Each propagation happens in the SAME update as the deletion that triggered
  * it, so a single undo restores the whole footnote.
  */
-
-/** The definition the collapsed selection sits inside, if any. */
-export function $definitionAtSelection(): FootnoteDefinitionNode | null {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
-    return null;
-  }
-  for (
-    let node: LexicalNode | null = selection.anchor.getNode();
-    node;
-    node = node.getParent()
-  ) {
-    if ($isFootnoteDefinitionNode(node)) {
-      return node;
-    }
-  }
-  return null;
-}
 
 /**
  * Emptying a note and deleting again removes it. A definition has no siblings

@@ -1,6 +1,13 @@
-import {$getRoot, $nodesOfType} from 'lexical';
+import {
+  $getRoot,
+  $getSelection,
+  $isRangeSelection,
+  $nodesOfType,
+  type LexicalNode,
+} from 'lexical';
 
 import {
+  $isFootnoteDefinitionNode,
   FootnoteDefinitionNode,
   type FootnoteDefinitionNode as Definition,
 } from '../nodes/FootnoteDefinitionNode';
@@ -131,4 +138,22 @@ export function $cleanupOrphanFootnotes(): boolean {
     }
   }
   return removed;
+}
+
+/** The definition the collapsed selection sits inside, if any. */
+export function $definitionAtSelection(): Definition | null {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+    return null;
+  }
+  for (
+    let node: LexicalNode | null = selection.anchor.getNode();
+    node;
+    node = node.getParent()
+  ) {
+    if ($isFootnoteDefinitionNode(node)) {
+      return node;
+    }
+  }
+  return null;
 }

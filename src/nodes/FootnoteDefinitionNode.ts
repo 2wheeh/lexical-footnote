@@ -17,8 +17,9 @@ import {footnoteIdState} from '../model/state';
 /**
  * A footnote definition (`[^id]: ...` in GFM). Holds flow content
  * (paragraphs) as its children, and is itself a slot value on
- * FootnoteSectionNode — so it has no parent, and the extension mounts its
- * DOM (an editable island) wherever the notes are rendered.
+ * FootnoteSectionNode — so it has no parent and no siblings, and the
+ * reconciler renders it as an editable island wherever the section's render
+ * override puts its container.
  */
 export class FootnoteDefinitionNode extends ElementNode {
   $config() {

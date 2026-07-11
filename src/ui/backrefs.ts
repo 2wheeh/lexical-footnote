@@ -1,8 +1,7 @@
 import type {LexicalEditor} from 'lexical';
 
-import {$getOrderedFootnoteIds} from '../model/definitions';
-import {$collectFootnoteRefs, footnoteNumbersOf} from '../model/numbering';
 import {backrefLabel} from '../io/gfm';
+import type {NoteView} from './derived';
 import {
   gotoNextDefinitionStart,
   gotoPreviousDefinitionOrBody,
@@ -53,21 +52,11 @@ export class BackrefOverlay {
    * Structure only — it runs on commit, when the model is the source of truth.
    * Where the groups sit on screen needs layout, and waits for the frame.
    */
-  sync(): void {
+  sync(notes: readonly NoteView[]): void {
     const overlay = this.overlay;
     if (!overlay) {
       return;
     }
-    // One walk of the document for all three derivations.
-    const notes = this.editor.read(() => {
-      const refs = $collectFootnoteRefs();
-      const numbers = footnoteNumbersOf(refs);
-      return $getOrderedFootnoteIds().map(footnoteId => ({
-        footnoteId,
-        number: numbers.get(footnoteId) ?? '?',
-        refCount: refs.get(footnoteId)?.length ?? 0,
-      }));
-    });
     const live = new Set(notes.map(note => note.footnoteId));
     for (const [footnoteId, group] of this.groups) {
       if (!live.has(footnoteId)) {

@@ -1,7 +1,6 @@
 import type {LexicalEditor} from 'lexical';
 
-import {$getOrderedFootnoteIds} from '../model/definitions';
-import {$getFootnoteSection} from '../nodes/FootnoteSectionNode';
+import type {DerivedFootnotes} from './derived';
 
 /**
  * The `<li>`s are ours, not the reconciler's: the render override creates one
@@ -14,18 +13,11 @@ import {$getFootnoteSection} from '../nodes/FootnoteSectionNode';
  * DOM order is meaningless: display order comes from `order` (a flex column —
  * moving the `<li>`s would move the DOM selection with them), and the marker
  * from `value`, since `::marker` counts DOM position.
- *
- * Runs on commit, not in a frame: the DOM is already reconciled by then, and
- * nothing here needs layout.
  */
-export function syncSectionList(editor: LexicalEditor): void {
-  const {sectionKey, orderedIds} = editor.read(() => {
-    const section = $getFootnoteSection();
-    return {
-      orderedIds: $getOrderedFootnoteIds(),
-      sectionKey: section ? section.getKey() : null,
-    };
-  });
+export function syncSectionList(
+  editor: LexicalEditor,
+  {sectionKey, orderedIds}: DerivedFootnotes,
+): void {
   if (sectionKey === null) {
     return;
   }

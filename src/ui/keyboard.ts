@@ -7,10 +7,8 @@ import {
   type LexicalEditor,
 } from 'lexical';
 
-import {$definitionAtSelection} from '../model/deletion';
-import {
-  $isFootnoteRefNode,
-} from '../nodes/FootnoteRefNode';
+import {$definitionAtSelection} from '../model/definitions';
+import {$isFootnoteRefNode} from '../nodes/FootnoteRefNode';
 import type {FootnoteDefinitionNode} from '../nodes/FootnoteDefinitionNode';
 import type {BackrefOverlay} from './backrefs';
 import {
