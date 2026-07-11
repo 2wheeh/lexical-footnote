@@ -46,11 +46,10 @@ export class FootnoteDefinitionNode extends ElementNode {
     content.className =
       (config.theme.footnoteDefinitionContent as string | undefined) ||
       'lexical-footnote__definition-content';
-    // The visible backref marker is a CSS ::after pseudo-element on this
-    // div, and its keyboard proxy lives OUTSIDE the contentEditable (see
-    // FootnoteExtension). No unmanaged element may live inside the li:
-    // anything here becomes a target for caret movement (word-jump,
-    // ArrowDown) that Lexical then mis-resolves.
+    // The backref marker is an overlay button positioned after this div's
+    // last line (see FootnoteExtension). No unmanaged element may live
+    // inside the li: anything here becomes a target for caret movement
+    // (word-jump, ArrowDown) that Lexical then mis-resolves.
     content.setAttribute('data-lexical-footnote-content', 'true');
     li.append(content);
     return li;

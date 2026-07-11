@@ -440,49 +440,6 @@ export const FootnoteExtension = defineExtension({
         output.numbers.value = next;
       }
     };
-    const onRootClick = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) {
-        return;
-      }
-      const li = target.closest('[data-lexical-footnote-def]');
-      if (!li) {
-        return;
-      }
-      // The backref is a ::after pseudo-element, so its clicks land on the
-      // pseudo's owner (li / content div) — but so do clicks on blank
-      // space around the note. Hit-test the pseudo's actual rendered zone:
-      // right after the content's last line box.
-      const content = li.querySelector('[data-lexical-footnote-content]');
-      if (!content || (target !== li && target !== content)) {
-        return;
-      }
-      const range = document.createRange();
-      range.selectNodeContents(content);
-      const rects = range.getClientRects();
-      const lastRect =
-        rects.length > 0
-          ? rects[rects.length - 1]!
-          : content.getBoundingClientRect();
-      const fontSize =
-        Number.parseFloat(getComputedStyle(content).fontSize) || 16;
-      // Zone ≈ the ↩ glyph itself (0.25em margin + ~1em glyph): clicks on
-      // surrounding blank space must fall through to caret placement,
-      // especially for empty notes where everything is "blank".
-      const inBackrefZone =
-        event.clientY >= lastRect.top &&
-        event.clientY <= lastRect.bottom &&
-        event.clientX >= lastRect.right + fontSize * 0.2 &&
-        event.clientX <= lastRect.right + fontSize * 1.4;
-      if (!inBackrefZone) {
-        return;
-      }
-      const footnoteId = li.getAttribute('data-lexical-footnote-def');
-      if (footnoteId) {
-        event.preventDefault();
-        output.gotoRef(footnoteId);
-      }
-    };
     // Returns the definition whose very end the collapsed selection sits at.
     const $definitionAtSelectionEnd = (): FootnoteDefinitionNode | null => {
       const selection = $getSelection();
@@ -519,18 +476,16 @@ export const FootnoteExtension = defineExtension({
         ? definition
         : null;
     };
-    // Shared keyboard proxy for the visible pseudo backrefs. It lives
-    // OUTSIDE the contentEditable — any element inside the editable
-    // becomes a caret-movement target (word-jump, ArrowDown) that Lexical
-    // mis-resolves. One button serves all definitions (roving focus); its
-    // focus state is projected onto the active definition's pseudo marker
-    // via a data attribute on the li.
-    let backrefProxy: HTMLButtonElement | null = null;
-    let focusedLi: Element | null = null;
-    const clearProxyFocus = () => {
-      focusedLi?.removeAttribute('data-lexical-footnote-backref-focus');
-      focusedLi = null;
-    };
+    // Backref markers are real buttons in an overlay layer OUTSIDE the
+    // contentEditable, absolutely positioned after each note's last line
+    // (the FindReplace decoration pattern). Inside the editable they would
+    // be caret-movement targets that Lexical mis-resolves; as a pseudo-
+    // element they could take neither focus nor precise clicks. Out here
+    // the paragraph DOM stays fully native (correct caret everywhere) and
+    // click/focus/a11y come for free.
+    let overlay: HTMLElement | null = null;
+    let currentRoot: HTMLElement | null = null;
+    const backrefButtons = new Map<string, HTMLButtonElement>();
     const returnToNoteEnd = (footnoteId: string, thenInsert?: string) => {
       editor.focus(() => {
         editor.update(
@@ -547,32 +502,23 @@ export const FootnoteExtension = defineExtension({
         );
       });
     };
-    const onProxyKeydown = (event: KeyboardEvent) => {
-      const footnoteId = backrefProxy?.dataset.lexicalFootnoteId;
-      if (!footnoteId || event.metaKey || event.ctrlKey) {
-        return;
-      }
-      const {key} = event;
-      if (!event.altKey && !event.shiftKey && (key === 'Enter' || key === ' ')) {
-        event.preventDefault();
-        output.gotoRef(footnoteId);
-      } else if (key === 'ArrowLeft' || key === 'Escape') {
-        event.preventDefault();
-        returnToNoteEnd(footnoteId);
-      } else if (!event.altKey && key.length === 1) {
-        // Typing on the focused backref continues at the note end.
-        event.preventDefault();
-        returnToNoteEnd(footnoteId, key);
-      }
+    const gotoNextDefinitionStart = (footnoteId: string) => {
+      editor.focus(() => {
+        editor.update(
+          () => {
+            const definition = $getFootnoteDefinition(footnoteId);
+            const next = definition?.getNextSibling();
+            if ($isFootnoteDefinitionNode(next)) {
+              next.selectStart();
+            } else {
+              definition?.selectEnd();
+            }
+          },
+          {tag: 'footnote-navigation'},
+        );
+      });
     };
-    const onProxyClick = () => {
-      // AT-synthesized activation (e.g. VoiceOver) arrives as a click.
-      const footnoteId = backrefProxy?.dataset.lexicalFootnoteId;
-      if (footnoteId) {
-        output.gotoRef(footnoteId);
-      }
-    };
-    const createBackrefProxy = (): HTMLButtonElement => {
+    const createBackrefButton = (footnoteId: string): HTMLButtonElement => {
       const button = document.createElement('button');
       button.type = 'button';
       // Roving focus: reached with ArrowRight from the end of a note, not
@@ -580,7 +526,117 @@ export const FootnoteExtension = defineExtension({
       button.tabIndex = -1;
       button.className = 'lexical-footnote__backref';
       button.setAttribute('aria-label', 'Back to reference');
+      button.textContent = '↩';
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        output.gotoRef(footnoteId);
+      });
+      button.addEventListener('keydown', event => {
+        if (event.metaKey || event.ctrlKey) {
+          return;
+        }
+        const {key} = event;
+        if (
+          !event.altKey &&
+          !event.shiftKey &&
+          (key === 'Enter' || key === ' ')
+        ) {
+          event.preventDefault();
+          output.gotoRef(footnoteId);
+        } else if (key === 'ArrowLeft' || key === 'Escape') {
+          event.preventDefault();
+          returnToNoteEnd(footnoteId);
+        } else if (key === 'ArrowRight' || key === 'ArrowDown') {
+          // Continue past the backref into the next note.
+          event.preventDefault();
+          gotoNextDefinitionStart(footnoteId);
+        } else if (!event.altKey && key.length === 1) {
+          // Typing on the focused backref continues at the note end.
+          event.preventDefault();
+          returnToNoteEnd(footnoteId, key);
+        }
+      });
       return button;
+    };
+    /** End of the note's last line, in viewport coordinates. */
+    const measureNoteEnd = (
+      content: Element,
+    ): {x: number; top: number; height: number} => {
+      const lastBlock = content.lastElementChild ?? content;
+      const walker = document.createTreeWalker(lastBlock, NodeFilter.SHOW_TEXT);
+      let lastText: Text | null = null;
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (n.textContent) {
+          lastText = n as Text;
+        }
+      }
+      if (lastText) {
+        const range = document.createRange();
+        range.selectNodeContents(lastText);
+        const rects = range.getClientRects();
+        const rect = rects[rects.length - 1];
+        if (rect) {
+          return {height: rect.height, top: rect.top, x: rect.right};
+        }
+      }
+      // Empty note (or empty trailing paragraph): start of that line.
+      const rect = lastBlock.getBoundingClientRect();
+      const lineHeight =
+        Number.parseFloat(getComputedStyle(lastBlock).lineHeight) ||
+        rect.height;
+      return {
+        height: Math.min(lineHeight, rect.height || lineHeight),
+        top: rect.top,
+        x: rect.left,
+      };
+    };
+    const positionBackrefs = (rootElement: HTMLElement) => {
+      if (!overlay) {
+        return;
+      }
+      const overlayRect = overlay.getBoundingClientRect();
+      const seen = new Set<string>();
+      for (const li of Array.from(
+        rootElement.querySelectorAll('[data-lexical-footnote-def]'),
+      )) {
+        const footnoteId = li.getAttribute('data-lexical-footnote-def');
+        const content = li.querySelector('[data-lexical-footnote-content]');
+        if (!footnoteId || !content) {
+          continue;
+        }
+        seen.add(footnoteId);
+        let button = backrefButtons.get(footnoteId);
+        if (!button) {
+          button = createBackrefButton(footnoteId);
+          backrefButtons.set(footnoteId, button);
+          overlay.appendChild(button);
+        }
+        const end = measureNoteEnd(content);
+        button.style.left = `${end.x - overlayRect.left + 3}px`;
+        button.style.top = `${end.top - overlayRect.top}px`;
+        button.style.lineHeight = `${Math.round(end.height)}px`;
+      }
+      for (const [id, button] of backrefButtons) {
+        if (!seen.has(id)) {
+          button.remove();
+          backrefButtons.delete(id);
+        }
+      }
+    };
+    const schedulePositionBackrefs = () => {
+      const rootElement = currentRoot;
+      if (!rootElement || !overlay) {
+        return;
+      }
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+          if (currentRoot === rootElement) {
+            positionBackrefs(rootElement);
+          }
+        });
+      } else {
+        positionBackrefs(rootElement);
+      }
     };
     const onRootKeydown = (event: KeyboardEvent) => {
       const {key} = event;
@@ -588,26 +644,17 @@ export const FootnoteExtension = defineExtension({
         return;
       }
       // Plain and Alt (word-jump) ArrowRight both stop at the note end and
-      // hand focus to the backref proxy. Capture phase: bubbling keystrokes
-      // reach Lexical's own key handling first otherwise.
+      // hand focus to that note's backref button. Capture phase: bubbling
+      // keystrokes reach Lexical's own key handling first otherwise.
       if (key === 'ArrowRight') {
-        const info = editor.read(() => {
-          const definition = $definitionAtSelectionEnd();
-          return definition
-            ? {id: definition.getFootnoteId(), key: definition.getKey()}
-            : null;
-        });
-        if (info && backrefProxy) {
-          const li = editor.getElementByKey(info.key);
-          if (li) {
-            event.preventDefault();
-            event.stopPropagation();
-            backrefProxy.dataset.lexicalFootnoteId = info.id;
-            clearProxyFocus();
-            focusedLi = li;
-            li.setAttribute('data-lexical-footnote-backref-focus', 'true');
-            backrefProxy.focus();
-          }
+        const footnoteId = editor.read(
+          () => $definitionAtSelectionEnd()?.getFootnoteId() ?? null,
+        );
+        const button = footnoteId ? backrefButtons.get(footnoteId) : null;
+        if (button) {
+          event.preventDefault();
+          event.stopPropagation();
+          button.focus();
         }
         return;
       }
@@ -667,23 +714,31 @@ export const FootnoteExtension = defineExtension({
       editor.registerRootListener(rootElement => {
         removeRootHandlers?.();
         removeRootHandlers = null;
-        backrefProxy = null;
-        clearProxyFocus();
+        overlay?.remove();
+        overlay = null;
+        backrefButtons.clear();
+        currentRoot = rootElement;
         if (!rootElement) {
           return;
         }
-        const proxy = createBackrefProxy();
-        rootElement.insertAdjacentElement('afterend', proxy);
-        backrefProxy = proxy;
+        const overlayElement = document.createElement('div');
+        overlayElement.className = 'lexical-footnote__backref-overlay';
+        rootElement.insertAdjacentElement('afterend', overlayElement);
+        overlay = overlayElement;
+        positionBackrefs(rootElement);
         removeRootHandlers = mergeRegister(
-          registerEventListener(rootElement, 'click', onRootClick),
           registerEventListener(rootElement, 'keydown', onRootKeydown, {
             capture: true,
           }),
-          registerEventListener(proxy, 'keydown', onProxyKeydown),
-          registerEventListener(proxy, 'click', onProxyClick),
-          registerEventListener(proxy, 'blur', clearProxyFocus),
-          () => proxy.remove(),
+          typeof window !== 'undefined'
+            ? registerEventListener(window, 'resize', () =>
+                positionBackrefs(rootElement),
+              )
+            : () => {},
+          () => {
+            overlayElement.remove();
+            backrefButtons.clear();
+          },
         );
       }),
       editor.registerCommand(
@@ -700,6 +755,7 @@ export const FootnoteExtension = defineExtension({
       editor.registerUpdateListener(() => {
         recomputeNumbers();
         knownDefIds = editor.read($collectDefIds);
+        schedulePositionBackrefs();
       }),
       editor.registerCommand(
         INSERT_FOOTNOTE_COMMAND,

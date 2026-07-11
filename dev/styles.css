@@ -68,26 +68,30 @@ body {
   position: relative;
 }
 
-/* Out-of-flow backref for keyboard/screen readers: absolutely positioned so
-   it never becomes a caret stop, visually hidden until focused */
+/* Backref buttons live in an overlay outside the contentEditable and are
+   absolutely positioned after each note's last line by the extension */
+.lexical-footnote__backref-overlay {
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
 .lexical-footnote__backref {
   background: none;
   border: none;
-  clip-path: inset(50%);
-  height: 1px;
-  overflow: hidden;
+  color: #6366f1;
+  cursor: pointer;
+  font-size: 0.8125em;
   padding: 0;
+  pointer-events: auto;
   position: absolute;
-  right: 0;
-  top: 0;
-  white-space: nowrap;
-  width: 1px;
 }
 
-/* Focus on the external proxy button is projected onto the visible
-   pseudo ↩ via a data attribute — the button itself never becomes visible */
-.lexical-footnote__definition[data-lexical-footnote-backref-focus]
-  .lexical-footnote__definition-content::after {
+.lexical-footnote__backref:hover {
+  text-decoration: underline;
+}
+
+.lexical-footnote__backref:focus {
   background: #6366f1;
   border-radius: 3px;
   color: #fff;
@@ -99,18 +103,8 @@ body {
   font-weight: 600;
 }
 
-/* Content flows inline for single-paragraph notes so ↩ trails the text */
-.lexical-footnote__definition-content {
-  display: inline;
-}
-
 .lexical-footnote__definition-content > p {
   margin: 0 0 0.25rem;
-}
-
-/* Last paragraph flows inline so the ↩ backref trails its final line */
-.lexical-footnote__definition-content > p:last-child {
-  display: inline;
 }
 
 .lexical-footnote__ref--selected button {
@@ -119,32 +113,3 @@ body {
   color: #fff;
 }
 
-/* Backref as a pseudo-element: visible and clickable, never a caret stop.
-   Always at the very end of the note's last line. */
-.lexical-footnote__definition-content::after {
-  color: #6366f1;
-  content: '↩';
-  cursor: pointer;
-  font-size: 0.9em;
-  margin-left: 0.25em;
-}
-
-/* An empty trailing paragraph renders as <p><br></p>; suppress that br's
-   line break so the ↩ shares the caret's line instead of dropping below.
-   inline-block + min-height keeps a caret-sized box so the caret stays
-   visible inside the otherwise empty paragraph. */
-.lexical-footnote__definition-content > p:last-child:has(> br:only-child) {
-  display: inline-block;
-  /* an empty inline-block's baseline is its bottom edge, so a 1em-tall box
-     sits exactly on the text baseline — the caret inside aligns with text */
-  height: 1em;
-  min-width: 1px;
-}
-
-.lexical-footnote__definition-content > p:last-child > br:only-child {
-  display: none;
-}
-
-.lexical-footnote__definition-content:hover::after {
-  text-decoration: underline;
-}
