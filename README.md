@@ -1,46 +1,37 @@
 # lexical-footnote
 
-GFM footnotes for [Lexical](https://lexical.dev), built on the extension
-system. Footnote refs, an auto-managed definitions section, in-page
-navigation, GFM-compatible HTML export/import, and markdown round-trip via
-`@lexical/mdast`.
+GFM footnotes for [Lexical](https://lexical.dev): superscript cues, an
+auto-managed notes section, in-page navigation, GitHub-compatible HTML
+export/import, and exact markdown round-trip via `@lexical/mdast`.
 
 > **Status: experimental POC.** Built against `lexical@0.47.0` and its
-> experimental extension / mdast / DOM-import APIs, which may break between
-> releases. Pin your lexical version. See [ROADMAP.md](./ROADMAP.md) for
-> what's planned.
+> experimental extension / mdast / DOM-import / named-slot APIs, which may
+> break between releases. Pin your lexical version.
+> [ROADMAP.md](./ROADMAP.md) has what's planned.
 
 ## Model
 
 | Node | Kind | Role |
 |---|---|---|
-| `FootnoteRefNode` | inline `DecoratorTextNode` | the superscript cue — in the body, or inside another note |
-| `FootnoteSectionNode` | `ElementNode` | hosts the definitions in named slots, pinned as the last block |
-| `FootnoteDefinitionNode` | `ElementNode` | one footnote's flow content |
+| `FootnoteRefNode` | inline `DecoratorTextNode` | a cue — in the body, or inside another note |
+| `FootnoteSectionNode` | `ElementNode`, last root child | hosts the definitions in named slots |
+| `FootnoteDefinitionNode` | `ElementNode`, slot value | one note's flow content |
 
-Design principles:
+- **The slot map is the definition map.** GFM keys definitions by identifier;
+  so does the model — each definition is a named slot (`fn:<id>`) on the
+  section. "One definition per identifier" is structural, there is no stored
+  order to maintain, and reordering the body never mutates the document.
+- **Derived numbering.** Numbers follow GFM — body cues first, then whatever
+  the notes themselves cite — recomputed each commit, exposed as a signal,
+  never stored on a node.
+- **Editable islands.** Each note renders in its own `contentEditable`
+  container: editable in place, structurally isolated from the body.
+- **Self-healing.** A dangling cue heals an empty definition; one section,
+  pinned last; orphan definitions are kept (legal in GFM).
 
-- **In-document definitions.** Definitions are real nodes (mapping 1:1 to
-  mdast `footnoteDefinition`), not an external store — history,
-  serialization, and copy/paste come for free.
-- **The slot map is the definition map.** GFM keys definitions by
-  identifier, and so does the model: each definition is a named slot
-  (`fn:<id>`) on the section, not a child of it. "One definition per
-  identifier" is therefore structural rather than a transform that has to
-  keep cleaning up after the user, and there is no stored order to keep
-  correct — so reordering the body no longer mutates the document at all.
-  The section itself stays an ordinary root child, which is what keeps it
-  reachable by the HTML and mdast exporters.
-- **Derived numbering.** Display numbers are never stored. They follow GFM:
-  the body's cues first, then whatever the notes themselves cite, in the
-  order the notes are read. Exposed as a signal, recomputed each commit.
-- **Self-healing invariants** via node transforms: one section, pinned last;
-  a dangling cue heals an empty definition; deleting a note deletes its cues;
-  orphan definitions are kept (GFM keeps unreferenced definitions).
-
-Each definition renders as an editable island — a slot container inside its
-own `<li>` — so a note can be edited in place while remaining structurally
-separate from the body: no selection can straddle the boundary between them.
+Because definitions are slot values, they don't appear in
+`section.getChildren()` and `definition.remove()` doesn't detach them — use
+`$getFootnoteDefinitions()` / `$removeFootnoteDefinition(id)`.
 
 ## Usage
 
@@ -58,9 +49,8 @@ const appExtension = defineExtension({
 <LexicalExtensionComposer extension={appExtension}>…</LexicalExtensionComposer>
 ```
 
-Insert via command, output API, or by typing — literal `[^id]` in body
-text materializes a cue and heals an empty definition (skipped inside
-code-formatted text):
+Insert via command, output API, or by typing — a literal `[^id]` in body text
+becomes a cue and heals its definition (skipped in code-formatted text):
 
 ```ts
 editor.dispatchCommand(INSERT_FOOTNOTE_COMMAND, undefined);
@@ -68,11 +58,9 @@ editor.dispatchCommand(INSERT_FOOTNOTE_COMMAND, undefined);
 const {insertFootnote, gotoDefinition, gotoRef, cleanupOrphans, numbers} =
   getExtensionDependencyFromEditor(editor, FootnoteExtension).output;
 
-gotoRef(id); // a note cited more than once: gotoRef(id, 2) for its 2nd cue
+gotoRef(id);    // a note cited more than once: gotoRef(id, 2) for its 2nd cue
+// `numbers` is a signal of Map<footnoteId, number> — the displayed numbering
 ```
-
-`numbers` is a signal of `Map<footnoteId, number>` — the displayed numbering,
-derived from cue order on every commit and never stored on a node.
 
 ### Markdown (optional)
 
@@ -81,9 +69,8 @@ import {FootnoteMdastExtension} from 'lexical-footnote/mdast';
 // add alongside MdastCommonMarkExtension / MdastExportExtension
 ```
 
-`[^id]` / `[^id]: …` round-trips through `@lexical/mdast`
-(micromark-extension-gfm-footnote under the hood). Definitions declared
-anywhere in the source are normalized into the section.
+`[^id]` / `[^id]: …` round-trips through `@lexical/mdast`. Definitions
+declared anywhere in the source are normalized into the section.
 
 ### Clipboard (optional)
 
@@ -91,119 +78,73 @@ anywhere in the source are normalized into the section.
 import {FootnoteClipboardExtension} from 'lexical-footnote/clipboard';
 ```
 
-Lexical's default paste path uses the legacy static-importDOM converter and
-never consults rule-based import. This extension routes `text/html` pastes
-through the DOMImportExtension pipeline, so pasting footnote-bearing HTML
-produces real footnotes. Opt-in because it reroutes all HTML pastes for
-the editor, not just footnote content.
+Routes `text/html` pastes through rule-based import (the default paste path
+never consults it), so footnote-bearing HTML pastes as real footnotes.
+Recognized and verified in Chrome, Firefox, and Safari:
 
-Recognized sources (verified in Chrome, Firefox, and Safari):
+- **Word** — desktop and web, including Safari's sanitized clipboard
+- **Google Docs** — exported/published HTML (in-editor copies don't carry
+  definitions — a Docs limitation — and paste as cues with empty notes)
+- **GitHub**'s rendered GFM, and this package's own `exportDOM`
 
-- **Word** — desktop and web copies, including Safari's sanitized clipboard
-  (absolute `applewebdata:` hrefs, stripped `mso-*` styles)
-- **Google Docs** — HTML the app exports or publishes (File → Download →
-  Web Page, or a published page). Copying inside the Docs editor doesn't
-  put definitions on the clipboard — a Docs limitation — so such pastes
-  produce cues with empty, editable notes
-- **GitHub**'s rendered GFM output and this package's own `exportDOM`
-
-Source chrome (separator rules, literal `[1]` markers, backref anchors) is
-stripped, and pasted footnotes get fresh ids so a paste can't collide with
-or merge into notes already in the document.
+Source chrome (separators, literal markers, backrefs) is stripped; pasted
+footnotes get fresh ids so a paste can't merge into existing notes.
 
 ### HTML
 
-`exportDOM` mirrors GitHub's footnote HTML — `<sup><a data-footnote-ref
-href="#fn-id" id="fnref-id">` cues and a `<section
-data-footnotes><ol><li id="fn-id">` block with `data-footnote-backref`
-links — so exported documents have working anchors on static pages. Import
-rules accept both this output and GitHub's `user-content-` prefixed HTML.
+`exportDOM` emits GitHub's exact shape: `<sup><a data-footnote-ref
+id="fnref-id">` cues (repeat cues suffixed `fnref-id-2`), a
+`<section data-footnotes>` with a visually-hidden `footnote-label` heading,
+and one `data-footnote-backref` link per cue (`↩`, `↩²`). Import accepts both
+this output and GitHub's `user-content-` prefixed variant.
 
-A note cited more than once gets a backref per cue: repeat cues are
-suffixed (`fnref-id-2`), and the second backref onwards shows its index
-(`↩`, `↩²`). The section opens with a visually-hidden
-`<h2 id="footnote-label">`, which every cue's `aria-describedby` points at.
-
-One deliberate difference from GitHub: a definition nothing refers to is
-still exported. This is a document editor, so an orphan note is content
-someone wrote and dropping it would be silent data loss. If your HTML is a
-rendering rather than a document, opt into GitHub's behavior:
+One deliberate difference: definitions nothing refers to are still exported —
+this is a document format, and an orphan note is content someone wrote. If
+your HTML is a rendering rather than a document, opt into GitHub's behavior
+(markdown export is unaffected either way):
 
 ```ts
 configExtension(FootnoteExtension, {dropOrphansOnExport: true});
 ```
 
-Markdown export is unaffected either way — GFM permits an orphan definition
-in the source, and only its HTML rendering discards it.
-
 ## Behavior notes
 
-- Inserting a footnote keeps selected text and places the marker after the
-  selection (Word/tiptap semantics), then moves the caret into the new
-  definition.
-- Deleting a cue keeps its definition as an orphan: the deletion stays
-  recoverable, and a cut cue can be pasted back onto its note. Call
-  `cleanupOrphans()` (output API) or `$cleanupOrphanFootnotes()` to
-  permanently discard unreferenced definitions — it returns `true` when
-  anything was removed. Use `$removeFootnote(id)` to remove cues and
-  definition together.
-- Deleting a definition deletes its cues in the same update (undo restores
-  both) — deleting the definition means deleting the footnote. Emptying a
-  note and deleting again is how you delete one from the keyboard; a
-  definition is a slot value, so no caret in the body can reach it. Cues
-  that become dangling some other way (e.g. pasted markers) heal an empty
-  definition, so references without content always render as numbered
-  entries.
-- Emptying the whole document removes the notes section with it — notes
-  annotate a document, and there is no longer one. A document that merely
-  *arrives* with no cues (an import of nothing but definitions) is left
-  alone.
-- Backspace/delete at a cue boundary selects the cue first instead of
-  deleting it outright (Word/Notion behavior); a second delete removes it.
-- Multiple refs to one id are valid (GFM) and share a number, and the note
-  gets a backref per cue. This differs from tiptap/Word, which duplicate the
-  footnote on paste — GFM semantics keep markdown round-trip exact.
-- A note may cite another note. Numbering follows GFM: the body first, then
-  whatever the notes cite, in the order the notes are read — so a note
-  reachable only from inside another one is numbered right after it. Cycles
-  and self-citation terminate.
-- Arrow keys move between notes. The extension does this itself in every
-  browser: each note is an editable island, and Firefox will not carry the
-  caret across one.
-- The definitions section is pinned to the end of the document; content
-  typed after it is moved above it.
+- Inserting keeps selected text, places the cue after it, and moves the caret
+  into the new note (Word/tiptap semantics).
+- Deleting a cue keeps its note as a recoverable orphan; `cleanupOrphans()`
+  discards orphans permanently. Deleting a note deletes its cues in the same
+  update (one undo restores both). Emptying a note and deleting again removes
+  it — the keyboard route to note deletion. Emptying the whole document
+  removes the section too.
+- Backspace at a cue boundary selects the cue first; a second delete removes
+  it.
+- Many cues may share one id (GFM): they share a number, and the note gets a
+  backref per cue. A note may cite another note — it's numbered right after
+  the note that cites it; cycles and self-citation terminate.
+- Arrow keys move between notes in every browser. Each note is an editable
+  island, and Firefox won't carry the caret across one on its own.
 
 ## vs. tiptap Pages footnotes
 
-[tiptap Pages footnotes](https://tiptap.dev/docs/pages/core-concepts/footnotes)
-render per **page**, above the page footer — a feature of their pagination
-engine, with footnote content stored outside the document and edited in a
-separate scoped editor. Lexical has no page/header/footer concept, so that
-placement is not reproducible; a continuous document collects notes at the
-end, which tiptap itself calls
-[endnotes](https://tiptap.dev/docs/pages/core-concepts/endnotes). This
-package is the endnotes/GFM shape with the same behavioral guarantees:
-computed continuous numbering (never stored), insert-after-selection,
-click-to-scroll navigation, undo-safe orphan retention with an explicit
-cleanup command, and empty notes that render and heal.
+tiptap renders footnotes per **page** — a feature of its pagination engine,
+with content stored outside the document. Lexical has no page concept; a
+continuous document collects notes at the end, which tiptap calls
+[endnotes](https://tiptap.dev/docs/pages/core-concepts/endnotes). This package
+is that shape with GFM semantics and in-document definitions.
 
 ## Development
 
 ```bash
 pnpm install
 pnpm dev            # vite demo
-pnpm test           # vitest, headless (happy-dom)
-pnpm test:browser   # Chromium, Firefox and WebKit, via playwright
+pnpm test           # headless (happy-dom): model, import/export
+pnpm test:browser   # Chromium, Firefox, WebKit: caret behavior
 pnpm build          # tsdown
 ```
 
-Caret behavior is only judged by `test:browser`. Each note renders as an
-editable island — a slot container with its own `contentEditable` — and the
-engines disagree at an island's boundary: Firefox will not carry the caret out
-of one. happy-dom has no caret at all, so the headless suite cannot see any of
-it. The source is split along the same line: `model/` is the rules and is
-judged headlessly, `ui/` needs a real browser, `io/` is the contracts with
-other formats.
+The source splits along the same line as the tests: `model/` is the rules
+(headless, no DOM), `ui/` needs a real browser, `io/` is the contracts with
+other formats, `spike/` pins the upstream slot APIs this package relies on.
 
 ## License
 
