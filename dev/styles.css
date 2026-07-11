@@ -86,23 +86,34 @@ body {
   display: inline;
 }
 
+
 .lexical-footnote__ref--selected button {
   background: #6366f1;
   border-radius: 3px;
   color: #fff;
 }
 
-[data-lexical-footnote-backref] {
-  background: none;
-  border: none;
+/* Backref as a pseudo-element: visible and clickable, never a caret stop.
+   Attached to the content div normally; when the trailing paragraph is
+   empty (<p><br></p> while composing), it moves up to the previous
+   paragraph so it stays glued to the last content line. */
+.lexical-footnote__definition-content::after,
+.lexical-footnote__definition-content
+  > p:nth-last-child(2):has(+ p:last-child > br:only-child)::after {
   color: #6366f1;
+  content: '↩';
   cursor: pointer;
   font-size: 0.9em;
   margin-left: 0.25em;
-  padding: 0;
-  vertical-align: baseline;
 }
 
-[data-lexical-footnote-backref]:hover {
+.lexical-footnote__definition-content:has(
+    > p:last-child > br:only-child
+  )::after {
+  content: none;
+}
+
+.lexical-footnote__definition-content:hover::after,
+.lexical-footnote__definition-content:hover > p::after {
   text-decoration: underline;
 }

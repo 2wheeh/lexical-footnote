@@ -46,13 +46,10 @@ export class FootnoteDefinitionNode extends ElementNode {
     content.className =
       (config.theme.footnoteDefinitionContent as string | undefined) ||
       'lexical-footnote__definition-content';
-    const backref = document.createElement('button');
-    backref.type = 'button';
-    backref.setAttribute('data-lexical-footnote-backref', 'true');
-    backref.contentEditable = 'false';
-    backref.textContent = '↩';
-    backref.setAttribute('aria-label', 'Back to reference');
-    li.append(content, backref);
+    // The in-editor backref marker is a CSS ::after pseudo-element on this
+    // div — a real element here would become a caret stop inside the li.
+    content.setAttribute('data-lexical-footnote-content', 'true');
+    li.append(content);
     return li;
   }
 
