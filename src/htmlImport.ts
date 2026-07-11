@@ -33,7 +33,7 @@ const FootnoteDefinitionImportRule = /* @__PURE__ */ defineImportRule({
     const id =
       parseFootnoteId(el.id ?? '', 'fn') ||
       el.getAttribute('data-lexical-footnote-def') ||
-    '';
+      '';
     if (!id) {
       return $next();
     }
