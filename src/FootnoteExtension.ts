@@ -342,8 +342,7 @@ function $rootTransform(node: RootNode): void {
 
 /**
  * Backspace/delete adjacent to a cue selects it first instead of deleting
- * it outright (Word/Notion behavior). NodeCaret recipe from the Lexical
- * maintainers; $normalizeCaret handles cues wrapped in e.g. MarkNode.
+ * it outright; a second delete removes it.
  */
 function $selectRefOnDeleteCharacter(isBackward: boolean): boolean {
   const selection = $getSelection();
@@ -351,13 +350,13 @@ function $selectRefOnDeleteCharacter(isBackward: boolean): boolean {
     return false;
   }
   const {anchor} = selection;
+  // Only act at node boundaries; mid-text deletion stays default.
   if (
     anchor.type === 'text' &&
     (isBackward
       ? anchor.offset > 0
       : anchor.offset < anchor.getNode().getTextContentSize())
   ) {
-    // Deleting within a text node, not across a node boundary.
     return false;
   }
   const pointCaret = $caretFromPoint(anchor, isBackward ? 'previous' : 'next');
@@ -421,16 +420,14 @@ export const FootnoteExtension = defineExtension({
       if (!(target instanceof Element)) {
         return;
       }
-      // Keyboard path: the visually hidden backref button (click fires on
-      // Enter/Space too).
       const backrefButton = target.closest('[data-lexical-footnote-backref]');
       const li = target.closest('[data-lexical-footnote-def]');
       if (!li) {
         return;
       }
       if (backrefButton) {
-        // Mouse/AT-synthesized clicks; keyboard Enter/Space is intercepted
-        // at keydown (capture) before Lexical's own key handling.
+        // AT-synthesized clicks on the hidden button; keyboard Enter/Space
+        // is intercepted at keydown before Lexical's own key handling.
         const footnoteId = li.getAttribute('data-lexical-footnote-def');
         if (footnoteId) {
           event.preventDefault();
@@ -499,19 +496,17 @@ export const FootnoteExtension = defineExtension({
         ? definition
         : null;
     };
-    // Keyboard navigation, handled in the capture phase at keydown — the
-    // backref button sits inside the contentEditable root, so otherwise the
-    // keystroke bubbles into Lexical's own key handling (e.g. Enter inserts
-    // a paragraph at the editor's stale selection).
-    //
-    // - ArrowRight at the end of a note focuses its backref (roving focus;
-    //   the button has tabindex=-1 and is not in the page tab order)
+    // Roving keyboard navigation:
+    // - ArrowRight at the end of a note focuses its backref
     // - Enter/Space on the focused backref navigates back to the ref
     // - ArrowLeft/Escape on the backref returns the caret to the note end
     // - Enter while a cue is node-selected opens its definition
+    // Capture phase is required: the backref button sits inside the
+    // contentEditable root, so bubbling keystrokes reach Lexical's own key
+    // handling and mutate the document at the stale selection.
     const onRootKeydown = (event: KeyboardEvent) => {
       const {key} = event;
-      if (event.altKey || event.metaKey || event.ctrlKey || event.shiftKey) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey) {
         return;
       }
       const target = event.target;
@@ -526,19 +521,10 @@ export const FootnoteExtension = defineExtension({
         if (!footnoteId) {
           return;
         }
-        if (key === 'Enter' || key === ' ') {
-          event.preventDefault();
-          event.stopPropagation();
-          // The button lives inside the contentEditable root, so
-          // editor.focus() considers focus already inside and won't move
-          // it; blur first so DOM focus actually lands on the editor.
-          if (backref instanceof HTMLElement) {
-            backref.blur();
-          }
-          output.gotoRef(footnoteId);
-        } else if (key === 'ArrowLeft' || key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
+        // Blur before navigating: with focus on a descendant of the root,
+        // editor.focus() considers the editor already focused and won't
+        // move DOM focus.
+        const $returnToNoteEnd = (thenInsert?: string) => {
           if (backref instanceof HTMLElement) {
             backref.blur();
           }
@@ -546,13 +532,39 @@ export const FootnoteExtension = defineExtension({
             editor.update(
               () => {
                 $getFootnoteDefinition(footnoteId)?.selectEnd();
+                if (thenInsert) {
+                  const selection = $getSelection();
+                  if ($isRangeSelection(selection)) {
+                    selection.insertText(thenInsert);
+                  }
+                }
               },
               {tag: 'footnote-navigation'},
             );
           });
+        };
+        if (!event.altKey && (key === 'Enter' || key === ' ')) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (backref instanceof HTMLElement) {
+            backref.blur();
+          }
+          output.gotoRef(footnoteId);
+        } else if (key === 'ArrowLeft' || key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          $returnToNoteEnd();
+        } else if (!event.altKey && key.length === 1) {
+          // Typing on the focused backref continues at the note end.
+          event.preventDefault();
+          event.stopPropagation();
+          $returnToNoteEnd(key);
         }
         return;
       }
+      // Plain and Alt (word-jump) ArrowRight both intercept at the note
+      // end: past it the only DOM positions are around the out-of-flow
+      // backref button, which Lexical cannot map.
       if (key === 'ArrowRight') {
         const definition = editor.read($definitionAtSelectionEnd);
         if (definition) {
@@ -565,6 +577,9 @@ export const FootnoteExtension = defineExtension({
             button.focus();
           }
         }
+        return;
+      }
+      if (event.altKey) {
         return;
       }
       if (key === 'Enter') {

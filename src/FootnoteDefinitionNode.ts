@@ -62,8 +62,9 @@ export class FootnoteDefinitionNode extends ElementNode {
     backref.className =
       (config.theme.footnoteBackref as string | undefined) ||
       'lexical-footnote__backref';
+    // No text content: a text child would be a landing spot for word-jump
+    // caret movement, which Lexical resolves to the document start.
     backref.setAttribute('aria-label', 'Back to reference');
-    backref.textContent = '↩';
     li.append(content, backref);
     return li;
   }
