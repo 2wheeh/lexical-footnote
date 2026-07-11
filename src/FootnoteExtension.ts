@@ -164,6 +164,24 @@ function gotoRef(editor: LexicalEditor, footnoteId: string): void {
   );
 }
 
+/**
+ * Definition lookup that also sees definitions not yet relocated into the
+ * section (e.g. mid-import, before $defTransform has moved them).
+ */
+function $findFootnoteDefinitionAnywhere(
+  footnoteId: string,
+): FootnoteDefinitionNode | null {
+  for (const {node} of $dfs()) {
+    if (
+      $isFootnoteDefinitionNode(node) &&
+      node.getFootnoteId() === footnoteId
+    ) {
+      return node;
+    }
+  }
+  return null;
+}
+
 /** Dangling ref (no definition) heals itself by creating one. */
 function $refTransform(node: FootnoteRefNode): void {
   const id = node.getFootnoteId();
@@ -171,7 +189,7 @@ function $refTransform(node: FootnoteRefNode): void {
     node.remove();
     return;
   }
-  if (!$getFootnoteDefinition(id)) {
+  if (!$findFootnoteDefinitionAnywhere(id)) {
     const definition = $createFootnoteDefinitionNode(id);
     definition.append($createParagraphNode());
     $ensureFootnoteSection().append(definition);
@@ -218,6 +236,24 @@ function $sectionTransform(node: FootnoteSectionNode): void {
   }
   if (root.getLastChild() !== node) {
     root.append(node);
+  }
+  // Dedupe by id (GFM: one definition per identifier). Prefer a definition
+  // with content over an empty auto-healed one.
+  const byId = new Map<string, FootnoteDefinitionNode>();
+  for (const def of node.getChildren().filter($isFootnoteDefinitionNode)) {
+    const id = def.getFootnoteId();
+    const kept = byId.get(id);
+    if (!kept) {
+      byId.set(id, def);
+    } else if (
+      kept.getTextContent().trim() === '' &&
+      def.getTextContent().trim() !== ''
+    ) {
+      kept.remove();
+      byId.set(id, def);
+    } else {
+      def.remove();
+    }
   }
   // Order definitions to match first-reference order; orphans keep their
   // relative order at the end (GFM keeps unreferenced definitions).

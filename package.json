@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./mdast": {
+      "types": "./dist/mdast.d.ts",
+      "import": "./dist/mdast.js",
+      "require": "./dist/mdast.cjs"
     }
   },
   "files": [
@@ -37,24 +42,38 @@
   "peerDependencies": {
     "@lexical/extension": "~0.47.0",
     "@lexical/html": "~0.47.0",
+    "@lexical/mdast": "~0.47.0",
     "@lexical/react": "~0.47.0",
     "@lexical/utils": "~0.47.0",
     "lexical": "~0.47.0",
     "react": ">=18",
     "react-dom": ">=18"
   },
+  "peerDependenciesMeta": {
+    "@lexical/mdast": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "mdast-util-gfm-footnote": "^2.1.0",
+    "micromark-extension-gfm-footnote": "^2.1.0"
+  },
   "devDependencies": {
     "@lexical/extension": "0.47.0",
     "@lexical/history": "0.47.0",
     "@lexical/html": "0.47.0",
+    "@lexical/mdast": "0.47.0",
     "@lexical/react": "0.47.0",
     "@lexical/rich-text": "0.47.0",
     "@lexical/utils": "0.47.0",
+    "@types/mdast": "^4.0.4",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
     "happy-dom": "^18.0.1",
     "lexical": "0.47.0",
+    "mdast-util-gfm-footnote": "^2.1.0",
+    "micromark-extension-gfm-footnote": "^2.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tsdown": "^0.22.4",
