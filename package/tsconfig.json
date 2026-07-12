@@ -10,15 +10,7 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "types": ["vite/client"]
+    "noEmit": true
   },
-  "include": [
-    "src",
-    "dev",
-    "spike",
-    "tsdown.config.ts",
-    "vite.config.ts",
-    "vitest.config.ts"
-  ]
+  "include": ["src", "spike", "tsdown.config.ts", "vitest.config.ts"]
 }

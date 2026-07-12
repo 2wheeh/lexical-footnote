@@ -1,4 +1,6 @@
-import {useState} from 'react';
+'use client';
+
+import {useEffect, useState} from 'react';
 
 import {AutoFocusExtension} from '@lexical/extension';
 import {HistoryExtension} from '@lexical/history';
@@ -18,9 +20,11 @@ import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 import {RichTextExtension} from '@lexical/rich-text';
 import {configExtension, defineExtension} from 'lexical';
 
-import {$isFootnoteRefNode, FootnoteExtension} from '../src';
-import {FootnoteClipboardExtension} from '../src/clipboard';
-import {FootnoteMdastExtension} from '../src/mdast';
+import {$isFootnoteRefNode, FootnoteExtension} from 'lexical-footnote';
+import {FootnoteClipboardExtension} from 'lexical-footnote/clipboard';
+import {FootnoteMdastExtension} from 'lexical-footnote/mdast';
+
+import './playground.css';
 
 const SAMPLE = `# lexical-footnote
 
@@ -62,8 +66,8 @@ const appExtension = defineExtension({
     FootnoteClipboardExtension,
     FootnoteMdastExtension,
   ],
-  name: 'lexical-footnote/dev',
-  namespace: 'lexical-footnote-dev',
+  name: 'lexical-footnote/playground',
+  namespace: 'lexical-footnote-playground',
   theme: {
     quote: 'editor-quote',
     text: {
@@ -110,35 +114,13 @@ function Toolbar() {
   );
 }
 
-export function App() {
+function App() {
   return (
-    <main>
-      <header className="site-header">
-        <h1>lexical-footnote</h1>
-        <nav className="site-links">
-          <a
-            href="https://github.com/2wheeh/lexical-footnote"
-            target="_blank"
-            rel="noreferrer"
-          >
-            GitHub
-          </a>
-          <a
-            href="https://www.npmx.dev/package/lexical-footnote"
-            target="_blank"
-            rel="noreferrer"
-          >
-            npm
-          </a>
-        </nav>
-      </header>
+    <main className="playground">
       <p className="site-tagline">
-        GFM footnotes for Lexical — insert with the button or by typing{' '}
-        <code>[^id]</code>. Click a cue to jump, ↩ to jump back, arrow keys
-        traverse notes.
-      </p>
-      <p className="site-tagline site-tagline--sub">
-        Pasting footnotes from a Word / Google Docs web view works too.
+        Insert with the button or by typing <code>[^id]</code>. Click a cue to
+        jump, ↩ to jump back, arrow keys traverse notes. Pasting footnotes from
+        a Word / Google Docs web view works too.
       </p>
       <LexicalExtensionComposer extension={appExtension}>
         <Toolbar />
@@ -146,4 +128,14 @@ export function App() {
       </LexicalExtensionComposer>
     </main>
   );
+}
+
+/**
+ * Client-only mount: the docs site is statically generated, and the editor
+ * is a browser thing — prerendering it buys nothing and risks the build.
+ */
+export function Playground() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? <App /> : null;
 }

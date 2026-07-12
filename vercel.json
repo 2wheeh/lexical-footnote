@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm --filter lexical-footnote build:demo",
-  "outputDirectory": "package/dev/dist",
+  "buildCommand": "pnpm build && pnpm docs:build",
+  "outputDirectory": "docs/dist/public",
   "installCommand": "pnpm install"
 }

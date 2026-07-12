@@ -47,8 +47,6 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsdown",
-    "build:demo": "vite build",
-    "dev": "vite",
     "test": "vitest run --project unit",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -109,7 +107,6 @@
     "@types/mdast": "^4.0.4",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^4.6.0",
     "@vitest/browser": "^3.2.7",
     "happy-dom": "^18.0.1",
     "lexical": "0.47.0",
@@ -120,7 +117,6 @@
     "react-dom": "^19.1.0",
     "tsdown": "^0.22.4",
     "typescript": "^5.8.3",
-    "vite": "^7.0.0",
     "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.34.4"

@@ -8,6 +8,15 @@
     "preview": "vocs preview"
   },
   "dependencies": {
+    "@lexical/clipboard": "0.47.0",
+    "@lexical/extension": "0.47.0",
+    "@lexical/history": "0.47.0",
+    "@lexical/html": "0.47.0",
+    "@lexical/mdast": "0.47.0",
+    "@lexical/react": "0.47.0",
+    "@lexical/rich-text": "0.47.0",
+    "@lexical/utils": "0.47.0",
+    "lexical": "0.47.0",
     "lexical-footnote": "workspace:*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

@@ -19,7 +19,7 @@ export default defineConfig({
         test: {
           environment: 'happy-dom',
           exclude: ['**/node_modules/**', '**/*.browser.test.{ts,tsx}'],
-          include: ['{src,dev,spike}/**/*.test.{ts,tsx}'],
+          include: ['{src,spike}/**/*.test.{ts,tsx}'],
           name: 'unit',
         },
       },

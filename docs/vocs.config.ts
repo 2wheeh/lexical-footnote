@@ -5,6 +5,10 @@ export default defineConfig({
   description:
     'GFM footnote extension for Lexical — footnote refs, definitions, in-page links, and mdast markdown round-trip.',
   renderStrategy: 'full-static',
+  topNav: [
+    {text: 'Docs', link: '/docs/getting-started'},
+    {text: 'Playground', link: '/playground'},
+  ],
   sidebar: [
     {
       text: 'Introduction',
