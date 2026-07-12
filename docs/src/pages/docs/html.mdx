@@ -1,0 +1,70 @@
+# HTML [GitHub-shaped export and import]
+
+`exportDOM` emits GitHub's exact footnote shape, and import reads that shape
+back — plus GitHub's own rendered output. The one deliberate divergence is
+about orphan notes, and it has an opt-out.
+
+## Export
+
+A cue exports as GitHub's superscript anchor, the notes as a labelled section:
+
+```html
+<sup><a href="#fn-id" id="fnref-id" data-footnote-ref>1</a></sup>
+
+<section data-footnotes class="footnotes">
+  <h2 id="footnote-label" class="sr-only">Footnotes</h2>
+  <ol>
+    <li id="fn-id">
+      <p>
+        The note.
+        <a
+          href="#fnref-id"
+          data-footnote-backref
+          aria-label="Back to reference 1"
+          >↩</a
+        >
+      </p>
+    </li>
+  </ol>
+</section>
+```
+
+The `footnote-label` heading is visually hidden — it names the section for a
+screen reader without printing a heading. A note cited more than once gets one
+backref per cue, and the repeat cues carry suffixed ids (`fnref-id-2`) so each
+backref lands on its own cue (`↩`, `↩²`, …).
+
+## Import
+
+Import accepts this output and GitHub's `user-content-`-prefixed variant — the
+prefix is a host's namespacing concern, so the importer reads both. Definitions
+declared as ordinary list items are slotted onto the single section wherever the
+source put them.
+
+## Orphan notes
+
+One difference from GitHub: a definition nothing refers to is still exported.
+This HTML is a document format, not only a rendering, and an orphan note is
+content someone wrote — dropping it on export would be silent data loss.
+
+If your HTML _is_ a rendering rather than a document, opt into GitHub's behavior
+and leave orphans out:
+
+```ts twoslash
+// @twoslash-cache: {"v":1,"hash":"8639e6b833e5bb05f0245f7bc6a2e32d3bb3ccbc11ead53f8e63ac5f833f1f6d","data":"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"}
+import {configExtension} from 'lexical';
+import {FootnoteExtension} from 'lexical-footnote';
+
+const configured = configExtension(FootnoteExtension, {
+  dropOrphansOnExport: true,
+});
+```
+
+:::note
+This affects HTML export only — markdown export keeps orphan definitions either
+way, as GFM permits.
+:::
+
+## Reference
+
+- [`FootnoteExtension` › dropOrphansOnExport](/docs/api/footnote-extension#droporphansonexport)

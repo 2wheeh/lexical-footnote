@@ -1,0 +1,155 @@
+# Helpers [The `$`-prefixed model functions]
+
+The functions behind the extension's behavior, exported for when you drive the model directly — reordering the body, building a table of contents from the notes, cleaning up on save. They are the same functions [`FootnoteExtension`](/docs/api/footnote-extension) wires together internally, split here by what they do.
+
+:::note
+Every `$`-prefixed helper reads or mutates the active editor state, so it must run inside `editor.read(() => …)` or `editor.update(() => …)` — calling one outside a Lexical scope throws. This is the standard Lexical convention for `$` functions.
+:::
+
+```ts
+import {createEditor} from 'lexical';
+import {
+  $getFootnoteDefinitions,
+  $cleanupOrphanFootnotes,
+} from 'lexical-footnote';
+
+const editor = createEditor();
+
+editor.read(() => {
+  const notes = $getFootnoteDefinitions(); // display order
+});
+
+editor.update(() => {
+  $cleanupOrphanFootnotes();
+});
+```
+
+## Queries
+
+Read-only lookups over the current state. Safe in `editor.read()`.
+
+### $getFootnoteSection
+
+- **Type:** `() => FootnoteSectionNode | null`
+
+The document's single [`FootnoteSectionNode`](/docs/api/nodes#footnotesectionnode), or `null` if no footnote exists yet. Found by scanning the root's children — the section is always the last root child when present.
+
+### $getFootnoteDefinition
+
+- **Type:** `(footnoteId: string) => FootnoteDefinitionNode | null`
+
+The note for `footnoteId`, or `null`. O(1): definitions are named slots on the section keyed by id, so this is a slot lookup, not a tree walk.
+
+### $getFootnoteDefinitions
+
+- **Type:** `() => FootnoteDefinitionNode[]`
+
+Every note, in display order (cited notes by number, then orphans). Because definitions are slot values they don't appear in `section.getChildren()` — this is how you enumerate them. See the [caveat on the Nodes page](/docs/api/nodes#footnotesectionnode).
+
+### $getOrderedFootnoteIds
+
+- **Type:** `() => string[]`
+
+The ids of every definition, in the same display order as `$getFootnoteDefinitions()` — the numbered ones first (by number), then orphans. Returns `[]` when there is no section.
+
+### $computeFootnoteNumbers
+
+- **Type:** `() => ReadonlyMap<string, number>`
+
+The displayed numbering derived from cue order — footnote id to its 1-based number, following GFM (body cues first, then notes cited only from inside other notes). Recomputed from a single document walk; never read off the slot map, whose order is unrelated. This is what backs the extension's [`numbers`](/docs/api/footnote-extension#numbers) signal. Orphans (nothing cites them) are absent from the map.
+
+### $getFootnoteRefs
+
+- **Type:** `(footnoteId: string) => readonly FootnoteRefNode[]`
+
+Every cue for `footnoteId`, in numbering order — including cues that sit inside another note. A note may be cited many times (GFM allows it); this is that list, and its length is the number of backrefs the note renders. Empty array if nothing cites the id.
+
+## Ordering
+
+### orderFootnoteIds
+
+- **Type:** `(footnoteIds: readonly string[], numbers: ReadonlyMap<string, number>) => string[]`
+
+Sorts a set of ids into display order given a numbering map: numbered ids ascending, then unnumbered (orphan) ids last. Pure and side-effect-free — pair it with `$computeFootnoteNumbers()` when you have ids from some other source and need them in the canonical order. `$getOrderedFootnoteIds()` is this applied to the section's own definition ids.
+
+## Mutations
+
+Structural edits. These must run inside `editor.update()`.
+
+### $removeFootnote
+
+- **Type:** `(footnoteId: string) => void`
+
+Removes the whole footnote — every cue for `footnoteId` and its definition — in one update. The user-facing "delete this note" operation.
+
+### $removeFootnoteDefinition
+
+- **Type:** `(footnoteId: string) => void`
+
+Removes just the definition, leaving its cues (the extension's deletion policy then reconciles them in the same update). Because a definition is a slot value, `definition.remove()` — a children-channel operation — does **not** detach it; this is the way to delete a note by id.
+
+### $cleanupOrphanFootnotes
+
+- **Type:** `() => boolean`
+
+Removes every definition no cue points to, returning `true` if it removed at least one. The model-level form of the extension's [`cleanupOrphans`](/docs/api/footnote-extension#cleanuporphans) output — call this one when you are already inside an update.
+
+## Slots
+
+The low-level slot API. The section stores definitions in named slots (`fn:<id>`); these address that map directly. Most code wants the [Queries](#queries) above instead — reach here only when writing your own slot-aware traversal.
+
+### footnoteSlotName
+
+- **Type:** `(footnoteId: string) => string`
+
+The slot name for a footnote id — `` `fn:${footnoteId}` ``. The join between an id and its slot on the section.
+
+### $getDefinitionSlot
+
+- **Type:** `(section: FootnoteSectionNode, footnoteId: string) => FootnoteDefinitionNode | null`
+
+The definition in `section`'s `fn:<id>` slot, or `null`. `$getFootnoteDefinition(id)` is this against the document's section.
+
+### $getDefinitionEntries
+
+- **Type:** `(section: FootnoteSectionNode) => { footnoteId: string; definition: FootnoteDefinitionNode }[]`
+
+Every `{footnoteId, definition}` the section holds, in slot-map (code-unit) order — which is **not** display order. Run the ids through [`orderFootnoteIds`](#orderfootnoteids) with `$computeFootnoteNumbers()` to get display order, or use `$getOrderedFootnoteIds()` / `$getFootnoteDefinitions()`, which already do.
+
+## Ids & state
+
+### createFootnoteId
+
+- **Type:** `() => string`
+
+A fresh, label-safe footnote id (8 random base-36 characters) — no spaces or brackets, so it doubles as the GFM identifier on markdown round-trip. Used when inserting a footnote and when re-keying a pasted note whose id collides with an existing one.
+
+### footnoteIdState
+
+- **Type:** `StateConfig<'footnoteId', string>`
+
+The Lexical node-state config that stores a footnote's id, shared by [`FootnoteRefNode`](/docs/api/nodes#footnoterefnode) and [`FootnoteDefinitionNode`](/docs/api/nodes#footnotedefinitionnode). Read it with the nodes' `getFootnoteId()` rather than touching this directly; it is exported for advanced state-driven code.
+
+## Backrefs
+
+The GFM HTML contract for backref links, shared by both halves of each link so they agree on one string. Relevant if you render or parse footnote HTML yourself; see [HTML Export & Import](/docs/html).
+
+### backrefTargetId
+
+- **Type:** `(footnoteId: string, occurrence: number) => string`
+
+The DOM id of the nth cue for a footnote (1-based) — and so the target its backref's `href` points at. The first cue is unsuffixed (`fnref-<id>`); repeats are numbered (`fnref-<id>-2`), because every cue for a multiply-cited note needs a distinct id.
+
+### backrefLabel
+
+- **Type:** `(footnoteNumber: number | string, occurrence: number) => string`
+
+The `aria-label` for a backref: `` `Back to reference 2` `` for a note's sole cue, `` `Back to reference 2-3` `` for the third cue of note 2.
+
+## HTML import
+
+### FootnoteImportRules
+
+- **Type:** `DOMImportRule[]`
+
+The rule-based DOM importers for footnote HTML: this package's own `exportDOM` output, GitHub's rendered GFM (`user-content-` prefix included), and Word / Google Docs footnote markup. [`FootnoteExtension`](/docs/api/footnote-extension) already installs these on its `DOMImportExtension`; they are exported so you can compose them into a custom import pipeline. Note that the default clipboard paste path does not consult rule-based import — that rerouting is what [`FootnoteClipboardExtension`](/docs/api/clipboard) adds.

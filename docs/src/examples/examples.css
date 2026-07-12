@@ -1,0 +1,81 @@
+/**
+ * Frame chrome for the live examples embedded in guide pages. Deliberately
+ * minimal: the point of every demo is what `lexical-footnote/styles.css`
+ * does on its own, so the frame contributes a border and a caption and
+ * nothing that could be mistaken for the package's styling.
+ */
+
+.docs-demo-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 720px) {
+  .docs-demo-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.docs-demo-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.docs-demo-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 0.875rem;
+  font-size: 0.8125rem;
+}
+
+.docs-demo-tokens label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  opacity: 0.8;
+}
+
+.docs-demo-tokens input[type='color'] {
+  width: 1.5rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.docs-demo {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 8px;
+  padding: 0.625rem 1rem 1rem;
+  min-width: 0;
+}
+
+.docs-demo > figcaption {
+  font-size: 0.8125rem;
+  opacity: 0.6;
+  margin-bottom: 0.625rem;
+}
+
+.docs-demo [contenteditable] {
+  outline: none;
+}
+
+.docs-demo-output {
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  border-radius: 6px;
+  min-width: 0;
+}

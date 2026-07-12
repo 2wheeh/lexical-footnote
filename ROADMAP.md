@@ -37,7 +37,6 @@ matters to you, open an issue so it gets prioritized.
 
 ## Quality & docs
 
-- [ ] Docs site with working examples, evolved from the demo deployment.
 - [ ] Screen-reader pass (VoiceOver) — the exported HTML carries GFM's a11y
       contract, but no screen reader has read it yet.
 - [ ] Extend the browser test project beyond the caret: click-to-jump,
@@ -59,13 +58,15 @@ matters to you, open an issue so it gets prioritized.
 
 ## Done
 
-Since 0.2.1: copy carries the notes a selection references (`text/html` and
+In 0.3.0: copy carries the notes a selection references (`text/html` and
 Lexical JSON payloads), and paste re-keys a carried footnote whose id names
 a different note in the target document — cut-and-paste moves the text, and
 a paste can't overwrite an existing note (see README "Clipboard"). The
 package now ships a default stylesheet — `lexical-footnote/styles.css`,
 themeable via `--lexical-footnote-*` tokens (see README "Styling") — and
-the docs playground was rebuilt on it.
+the docs playground was rebuilt on it. The docs site now carries a full API
+reference and guides alongside the playground, replacing the old demo
+deployment.
 
 In 0.2.0, definitions became named slots on the section — the slot map _is_
 the GFM definition map (see README "Model"). With it: per-cue backrefs and

@@ -1,0 +1,60 @@
+/**
+ * Site-wide styles (vocs auto-loads pages/_root.css; note: picked up by the
+ * production build — the dev server doesn't watch it).
+ *
+ * --landing-accent is the playground's indigo (playground.css --pg-accent),
+ * shared by the landing hero's footnote anatomy and the sidebar's
+ * playground entry. The site's theme toggle stamps html[data-vocs-theme]
+ * client-side only, so prefers-color-scheme is the SSG fallback and the
+ * stamped attribute must win in both directions.
+ */
+
+:root {
+  --landing-accent: oklch(0.51 0.15 276);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --landing-accent: oklch(0.74 0.11 276);
+  }
+}
+
+html[data-vocs-theme='light'] {
+  --landing-accent: oklch(0.51 0.15 276);
+}
+
+html[data-vocs-theme='dark'] {
+  --landing-accent: oklch(0.74 0.11 276);
+}
+
+/* The logo carries a little cue — pure ornament, the anatomy as wordmark. */
+[data-v-logo-text]::after {
+  content: '1';
+  font-size: 0.55em;
+  vertical-align: super;
+  color: var(--landing-accent);
+  margin-left: 0.15em;
+  font-weight: 600;
+}
+
+/*
+ * The sidebar's playground entry is a standout button — accent border,
+ * fill, and text. Scoped to the item's own data-v-sidebar-item (after
+ * hydration a layout-level wrapper also carries data-v-sidebar, so an
+ * ancestor scope would leak to the top-nav tab and content links): the
+ * top-nav tab and any in-content links keep their default styling.
+ */
+
+a[data-v-sidebar-item][href='/playground'] {
+  margin-top: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--landing-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--landing-accent) 12%, transparent);
+  border-radius: 8px;
+  color: var(--landing-accent);
+  font-weight: 500;
+}
+
+a[data-v-sidebar-item][href='/playground']:hover {
+  background: color-mix(in srgb, var(--landing-accent) 20%, transparent);
+  color: var(--landing-accent);
+}

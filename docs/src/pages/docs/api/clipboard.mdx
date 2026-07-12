@@ -1,0 +1,46 @@
+# FootnoteClipboardExtension [Copy & paste that carries notes]
+
+The optional clipboard layer, from `lexical-footnote/clipboard`. It makes a copied cue bring its note along, and makes footnote-bearing HTML from other apps paste as real footnotes. It depends on [`FootnoteExtension`](/docs/api/footnote-extension) and is separate from it for a reason worth reading before you register it.
+
+## Usage
+
+```ts
+import {FootnoteClipboardExtension} from 'lexical-footnote/clipboard';
+import {RichTextExtension} from '@lexical/rich-text';
+import {defineExtension} from 'lexical';
+
+const appExtension = defineExtension({
+  name: 'app',
+  namespace: 'app',
+  dependencies: [RichTextExtension, FootnoteClipboardExtension],
+});
+```
+
+It registers no output; adding it to `dependencies` is all the wiring. See the [Clipboard guide](/docs/clipboard) for the copy/paste behavior end to end and the list of verified sources (Word, Google Docs, GitHub).
+
+## Copy
+
+A definition is a slot value on the section, so a body selection holding a cue never contains its note — a cue pasted elsewhere would heal an empty placeholder and the text would stay behind. On copy this extension appends the referenced notes to **both** payloads it writes:
+
+- `text/html` — the notes are appended as a GFM footnote section (`<section data-footnotes>`), exactly what GitHub emits, so this package's own importer and GitHub itself both read it back.
+- `application/x-lexical-editor` — the notes are appended as top-level nodes in the Lexical JSON. This MIME wins the paste-priority race inside Lexical editors, so without it the HTML payload would never get a chance there.
+
+The set of carried notes is **transitive**: a carried note may cite further notes, and those are collected too, in display-number order — otherwise pasting the note would heal placeholders for its own citations.
+
+## Paste
+
+Two things happen on paste.
+
+**HTML is rerouted through rule-based import.** The extension reroutes `text/html` pastes through the [`DOMImportExtension`](/docs/api/footnote-extension) pipeline, so the [footnote import rules](/docs/api/helpers#footnoteimportrules) — this package's HTML, GitHub's GFM output, Word, Google Docs — apply to real clipboard pastes. The default clipboard path uses the legacy static-converter route, which never consults rule-based import.
+
+**Colliding ids are re-keyed.** An id is the join key between a cue and its note, so what a paste means depends on what the id already resolves to in the target document. A carried note whose id names a _different_ note here (two markdown documents both using `[^1]`) is given a fresh id, and its cues follow — so a paste can never overwrite an existing note. A note that matches existing content keeps its id, so cutting a cue and pasting it back reconnects, and multiple cues keep sharing one note.
+
+:::warning
+Because rule-based rerouting is installed per editor, the import side reroutes **all** `text/html` pastes for that editor, not just footnote content. Every HTML paste goes through the rule pipeline once this extension is registered. Non-footnote HTML falls through the footnote rules unchanged, but if you have your own paste-transform assumptions, know that this changes the paste path for the whole editor.
+:::
+
+## Reference
+
+- [Clipboard guide](/docs/clipboard) — verified sources and end-to-end behavior.
+- [FootnoteExtension](/docs/api/footnote-extension) — the required core dependency.
+- [Helpers › FootnoteImportRules](/docs/api/helpers#footnoteimportrules) — the rules the paste side runs.
