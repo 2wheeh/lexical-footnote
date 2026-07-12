@@ -1,0 +1,8 @@
+dist/
+node_modules/
+pnpm-lock.yaml
+.vocs/
+docs/src/pages.gen.ts
+__screenshots__/
+.omc/
+.idea/

@@ -1,0 +1,45 @@
+# Getting Started
+
+::::steps
+
+## Install
+
+:::code-group
+
+```bash [pnpm]
+pnpm add lexical-footnote
+```
+
+```bash [npm]
+npm i lexical-footnote
+```
+
+:::
+
+## Register the extension
+
+```tsx
+import {FootnoteExtension} from 'lexical-footnote';
+
+const editor = buildEditorFromExtensions({
+  dependencies: [FootnoteExtension],
+  name: 'my-editor',
+  namespace: 'my-app',
+});
+```
+
+## Type a footnote
+
+Type `[^note]` anywhere in the body — the cue materializes and an empty
+note heals into the footnote section, ready to be written.
+
+::::
+
+## Optional entry points
+
+| Entry                        | What it adds                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| `lexical-footnote/mdast`     | GFM markdown round-trip via `@lexical/mdast`                                   |
+| `lexical-footnote/clipboard` | Word / Google Docs / GitHub paste, and copy that carries notes with their cues |
+
+_Full documentation is being written — the [README](https://github.com/2wheeh/lexical-footnote#readme) is the reference for now._

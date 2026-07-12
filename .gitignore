@@ -6,3 +6,6 @@ dist/
 
 # vitest browser mode failure artifacts
 __screenshots__/
+
+# vite cache
+.vite/

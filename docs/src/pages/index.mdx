@@ -1,0 +1,44 @@
+---
+title: lexical-footnote - GFM footnotes for Lexical
+layout: minimal
+showLogo: false
+description: GFM footnote extension for Lexical — footnote refs, definitions, in-page links, and mdast markdown round-trip.
+---
+
+import {HomePage} from 'vocs';
+
+<HomePage.Root>
+  <HomePage.Logo />
+  <HomePage.Tagline>
+    GFM footnotes for Lexical — cues, notes, in-page links, and markdown
+    round-trip.
+  </HomePage.Tagline>
+  <HomePage.InstallPackage name="lexical-footnote" type="install" />
+  <HomePage.Buttons>
+    <HomePage.Button href="/docs/getting-started" variant="accent">
+      Get started
+    </HomePage.Button>
+    <HomePage.Button href="https://lexical-footnote.vercel.app">
+      Demo
+    </HomePage.Button>
+    <HomePage.Button href="https://github.com/2wheeh/lexical-footnote">
+      GitHub
+    </HomePage.Button>
+  </HomePage.Buttons>
+</HomePage.Root>
+
+# Overview
+
+Type `[^note]` and a footnote heals into existence. Numbering is computed,
+never stored; export matches GitHub's HTML exactly; Word, Google Docs, and
+GitHub pastes arrive as real footnotes.
+
+```tsx
+import {FootnoteExtension} from 'lexical-footnote';
+
+const editor = buildEditorFromExtensions({
+  dependencies: [FootnoteExtension],
+  name: 'my-editor',
+  namespace: 'my-app',
+});
+```

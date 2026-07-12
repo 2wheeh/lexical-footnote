@@ -1,0 +1,127 @@
+{
+  "name": "lexical-footnote",
+  "version": "0.2.1",
+  "description": "GFM footnote extension for Lexical — footnote refs, definitions, in-page links, and mdast markdown round-trip",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./mdast": {
+      "import": {
+        "types": "./dist/mdast.d.ts",
+        "default": "./dist/mdast.js"
+      },
+      "require": {
+        "types": "./dist/mdast.d.cts",
+        "default": "./dist/mdast.cjs"
+      }
+    },
+    "./clipboard": {
+      "import": {
+        "types": "./dist/clipboard.d.ts",
+        "default": "./dist/clipboard.js"
+      },
+      "require": {
+        "types": "./dist/clipboard.d.cts",
+        "default": "./dist/clipboard.cjs"
+      }
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "build:demo": "vite build",
+    "dev": "vite",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "test:browser": "vitest run --project browser",
+    "test:all": "vitest run"
+  },
+  "keywords": [
+    "lexical",
+    "footnote",
+    "gfm",
+    "mdast",
+    "markdown",
+    "editor"
+  ],
+  "author": "2wheeh",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/2wheeh/lexical-footnote.git",
+    "directory": "package"
+  },
+  "homepage": "https://github.com/2wheeh/lexical-footnote#readme",
+  "bugs": {
+    "url": "https://github.com/2wheeh/lexical-footnote/issues"
+  },
+  "peerDependencies": {
+    "@lexical/clipboard": "~0.47.0",
+    "@lexical/extension": "~0.47.0",
+    "@lexical/html": "~0.47.0",
+    "@lexical/mdast": "~0.47.0",
+    "@lexical/react": "~0.47.0",
+    "@lexical/utils": "~0.47.0",
+    "lexical": "~0.47.0",
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@lexical/clipboard": {
+      "optional": true
+    },
+    "@lexical/mdast": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "mdast-util-gfm-footnote": "^2.1.0",
+    "micromark-extension-gfm-footnote": "^2.1.0"
+  },
+  "devDependencies": {
+    "@lexical/clipboard": "0.47.0",
+    "@lexical/extension": "0.47.0",
+    "@lexical/history": "0.47.0",
+    "@lexical/html": "0.47.0",
+    "@lexical/mdast": "0.47.0",
+    "@lexical/react": "0.47.0",
+    "@lexical/rich-text": "0.47.0",
+    "@lexical/utils": "0.47.0",
+    "@types/mdast": "^4.0.4",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "@vitest/browser": "^3.2.7",
+    "happy-dom": "^18.0.1",
+    "lexical": "0.47.0",
+    "mdast-util-gfm-footnote": "^2.1.0",
+    "micromark-extension-gfm-footnote": "^2.1.0",
+    "playwright": "^1.61.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tsdown": "^0.22.4",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4"
+  },
+  "packageManager": "pnpm@10.34.4"
+}
