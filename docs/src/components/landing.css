@@ -27,7 +27,7 @@
 }
 
 .landing-title sup a {
-  color: var(--vocs-color_textAccent, currentColor);
+  color: var(--landing-accent, currentColor);
   text-decoration: none;
   padding: 0.1em 0.25em;
   border-radius: 0.3em;
@@ -35,7 +35,11 @@
 
 .landing-title sup a:hover,
 .landing-title sup a:focus-visible {
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--landing-accent, currentColor) 12%,
+    transparent
+  );
   outline: none;
 }
 
@@ -63,12 +67,12 @@
 }
 
 .landing-note-num {
-  color: var(--vocs-color_textAccent, currentColor);
+  color: var(--landing-accent, currentColor);
   margin-right: 0.4em;
 }
 
 .landing-backref {
-  color: var(--vocs-color_textAccent, currentColor);
+  color: var(--landing-accent, currentColor);
   text-decoration: none;
   margin-left: 0.35em;
   padding: 0 0.25em;
@@ -77,6 +81,10 @@
 
 .landing-backref:hover,
 .landing-backref:focus-visible {
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--landing-accent, currentColor) 12%,
+    transparent
+  );
   outline: none;
 }

@@ -7,6 +7,7 @@ export default defineConfig({
   description:
     'GFM footnote extension for Lexical — footnote refs, definitions, in-page links, and mdast markdown round-trip.',
   renderStrategy: 'full-static',
+  ogImageUrl: 'https://lexical-footnote.vercel.app/og.png',
   twoslash: {
     // twoslash fails on Vercel's cold build: @typescript/vfs's lib map lacks
     // TS 5.9's lib.es2025.iterator.d.ts — a vfs bug that isn't reproducible
@@ -70,6 +71,8 @@ export default defineConfig({
         {text: 'FootnoteClipboardExtension', link: '/docs/api/clipboard'},
       ],
     },
+    // Styled apart via pages/_root.css ([data-v-sidebar] a[href='/playground']).
+    {text: 'Playground', link: '/playground'},
   ],
   socials: [
     {
