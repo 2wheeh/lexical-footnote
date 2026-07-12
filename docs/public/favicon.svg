@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    text {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        Helvetica, Arial, sans-serif;
+    }
+    .lf { fill: #1c1c1c; font-weight: 700; }
+    .cue { fill: oklch(0.51 0.15 276); font-weight: 650; }
+    @media (prefers-color-scheme: dark) {
+      .lf { fill: #f2f2f2; }
+      .cue { fill: oklch(0.74 0.11 276); }
+    }
+  </style>
+  <text x="1" y="52" font-size="56" letter-spacing="-2" class="lf">lf</text>
+  <text x="39" y="26" font-size="29" class="cue">1</text>
+</svg>

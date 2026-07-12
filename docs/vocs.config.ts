@@ -7,6 +7,8 @@ export default defineConfig({
   description:
     'GFM footnote extension for Lexical — footnote refs, definitions, in-page links, and mdast markdown round-trip.',
   renderStrategy: 'full-static',
+  baseUrl: 'https://lexical-footnote.vercel.app',
+  iconUrl: '/favicon.svg',
   ogImageUrl: 'https://lexical-footnote.vercel.app/og.png',
   twoslash: {
     // twoslash fails on Vercel's cold build: @typescript/vfs's lib map lacks
