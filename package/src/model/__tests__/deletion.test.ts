@@ -205,6 +205,34 @@ describe('deletion', () => {
     expect(itemIds()).toEqual([]);
   });
 
+  it('recovers when a deletion removes the last body block outright', () => {
+    // A browser backspace on a fully-selected paragraph removes the block
+    // itself, not just its children (unlike removeText, which leaves the
+    // emptied paragraph behind). That left the section as the root's ONLY
+    // child: the empty-body policy skipped (no body blocks to judge
+    // empty), and a non-editable shell offers no caret position anywhere —
+    // the editor was unusable. The root transform now restores a body
+    // paragraph, which also lets the empty-body policy converge to the
+    // same end state as select-all + delete.
+    seedTwoFootnotes();
+    editor.update(
+      () => {
+        $getRoot().getFirstChild()?.remove();
+      },
+      {discrete: true},
+    );
+
+    editor.read(() => {
+      expect($getFootnoteSection()).toBeNull();
+      expect(
+        $getRoot()
+          .getChildren()
+          .map(child => child.getType()),
+      ).toEqual(['paragraph']);
+      expect($getSelection()).not.toBeNull();
+    });
+  });
+
   it('cleans up an orphan definition without disturbing the others', () => {
     seedTwoFootnotes();
     // An imported orphan: a definition that never had a ref (legal in GFM),

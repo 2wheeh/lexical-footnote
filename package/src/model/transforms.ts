@@ -1,8 +1,11 @@
 import {mergeRegister} from '@lexical/utils';
 import {
   $createParagraphNode,
+  $getNodeByKey,
   $getRoot,
+  $getSelection,
   $getSlotHost,
+  $isRangeSelection,
   RootNode,
   TextNode,
   type LexicalEditor,
@@ -117,8 +120,34 @@ function $sectionTransform(node: FootnoteSectionNode): void {
  */
 function $rootTransform(node: RootNode): void {
   const section = $getFootnoteSection();
-  if (section && node.getLastChild() !== section) {
+  if (!section) {
+    return;
+  }
+  if (node.getLastChild() !== section) {
     node.append(section);
+  }
+  // Never the root's only child. Orphaned notes keep the section alive when
+  // the whole body is deleted (a body-scoped select-all stops at the
+  // non-editable shell, so the section itself survives the range) — but a
+  // root holding only the section isn't "empty" to Lexical, so no paragraph
+  // gets auto-created, and the shell offers no caret position: the editor
+  // would be unusable. Restore a body paragraph, and give the caret a home
+  // if the deletion left the selection with none.
+  if (node.getChildrenSize() === 1) {
+    const paragraph = $createParagraphNode();
+    section.insertBefore(paragraph);
+    // Only rescue a caret that has nowhere to live — a deletion that took
+    // the body leaves the selection pointing at a detached node (not null;
+    // stale, and still in the node map until reconciliation garbage-collects
+    // it, so it must be tested via isAttached). A valid caret, e.g. sitting
+    // inside a note island, must not be yanked into the new paragraph.
+    const selection = $getSelection();
+    const anchorNode = $isRangeSelection(selection)
+      ? $getNodeByKey(selection.anchor.key)
+      : null;
+    if (selection === null || anchorNode === null || !anchorNode.isAttached()) {
+      paragraph.selectStart();
+    }
   }
 }
 
