@@ -1,0 +1,75 @@
+# Clipboard [Copy that carries notes, paste that recognizes them]
+
+A cue's note is a slot value, so no selection can contain it — copy a cue on its
+own and the text stays behind. `FootnoteClipboardExtension` fixes both
+directions: copy carries the referenced notes, and paste turns footnote-bearing
+HTML from other apps into real footnotes.
+
+## Register the extension
+
+```tsx twoslash
+// @twoslash-cache: {"v":1,"hash":"23302fb5af21414fc030b10eeecbf1c1128c218cc811c619bbb5bddd8496abd4","data":"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"}
+import {buildEditorFromExtensions} from '@lexical/extension';
+import {RichTextExtension} from '@lexical/rich-text';
+import {FootnoteExtension} from 'lexical-footnote';
+import {FootnoteClipboardExtension} from 'lexical-footnote/clipboard';
+
+const editor = buildEditorFromExtensions({
+  dependencies: [
+    RichTextExtension,
+    FootnoteExtension,
+    FootnoteClipboardExtension,
+  ],
+  name: 'my-editor',
+  namespace: 'my-app',
+});
+```
+
+## Copy
+
+Copying a selection appends the notes it references to both payloads: the
+`text/html` gets a GFM footnote section, and the Lexical JSON gets the
+definitions as nodes. So a cue pasted elsewhere brings its note along. The walk
+is transitive — a carried note that cites further notes carries those too.
+
+## Paste
+
+Paste routes every `text/html` payload through rule-based import, so
+footnote-bearing HTML lands as real footnotes rather than inert markup.
+Recognized sources, verified by hand against real clipboards in Chrome,
+Firefox, and Safari (automated real-clipboard tests are on the
+[roadmap](https://github.com/2wheeh/lexical-footnote/blob/main/ROADMAP.md)):
+
+- **Word** — desktop and web, including Safari's sanitized clipboard.
+- **Google Docs** — exported or published HTML.
+- **GitHub**'s rendered GFM, and this package's own `exportDOM`.
+
+Source chrome — separators, literal `[1]` markers, backref arrows — is stripped
+on the way in.
+
+:::note
+An in-editor copy from Google Docs doesn't carry its definitions (a Docs
+limitation), so those cues paste with empty notes. Use Docs' exported or
+published HTML to bring the notes across.
+:::
+
+## Re-keying on paste
+
+An id is the join key between a cue and its note, so a paste must never let a
+carried note clobber one already in the document. The rules:
+
+- **Word and Docs footnotes** get fresh ids — their `1..n` numbering would
+  otherwise collide with existing notes or an earlier paste.
+- **A carried footnote whose id names a _different_ note here** is re-keyed on
+  arrival, and its cues follow.
+- **Same-content pastes keep their id** — so cutting a cue and pasting it back
+  reconnects to its note, and multiple cues keep sharing one note.
+
+:::note
+Paste rerouting applies to _all_ `text/html` pastes for the editor, not only
+footnote content — the extension owns the whole HTML paste path.
+:::
+
+## Reference
+
+- [`lexical-footnote/clipboard`](/docs/api/clipboard)

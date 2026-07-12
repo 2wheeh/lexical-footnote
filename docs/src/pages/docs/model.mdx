@@ -1,0 +1,80 @@
+# Model [How footnotes live in the document]
+
+Three node kinds hold the footnotes; everything else is derived. Numbers, HTML
+ids, backrefs — all computed from where the cues sit, never stored on a node.
+
+## The nodes
+
+| Node                     | Kind                           | Role                                        |
+| ------------------------ | ------------------------------ | ------------------------------------------- |
+| `FootnoteRefNode`        | inline `DecoratorTextNode`     | a cue — in the body, or inside another note |
+| `FootnoteSectionNode`    | `ElementNode`, last root child | hosts the definitions in named slots        |
+| `FootnoteDefinitionNode` | `ElementNode`, slot value      | one note's flow content                     |
+
+## The slot map is the definition map
+
+GFM keys definitions by identifier; so does the model. Each definition is a
+named slot (`fn:<id>`) on the section — not a child of it. "One definition per
+identifier" is therefore structural: there is no stored order to maintain, and
+reordering the body never mutates the document.
+
+Because definitions are slot values, they don't appear in
+`section.getChildren()`, and `definition.remove()` doesn't detach one. Reach
+them through the helpers instead:
+
+```ts
+$getFootnoteDefinitions(); // every definition, in derived reference order
+$removeFootnoteDefinition(id); // detach one from its slot
+```
+
+## Derived numbering
+
+Numbers follow GFM order: body cues first, then whatever the notes themselves
+cite. They are recomputed on every commit, exposed as a signal, and never
+written to a node — reorder the body and the numbering follows. A note cited
+more than once shares a single number across all its cues.
+
+```ts
+const {numbers} = getExtensionDependencyFromEditor(
+  editor,
+  FootnoteExtension,
+).output;
+// numbers is a signal of Map<footnoteId, number> — the displayed numbering
+```
+
+## Editable islands
+
+Each note renders in its own `contentEditable` container: editable in place,
+structurally isolated from the body. The section itself is a non-editable
+shell — a caret in the body can never land in it, only in one of the note
+islands it hosts.
+
+## Self-healing
+
+The model keeps itself legal without a validation pass:
+
+- a dangling cue heals an empty definition into existence;
+- there is one section, pinned as the last child of the root;
+- orphan definitions — a note nothing refers to — are kept, which GFM allows.
+
+## Deleting
+
+Definitions have no siblings and no caret can reach them, so ordinary deletion
+never touches one. An explicit policy fills the gap:
+
+- **Delete a cue** → its note stays as a recoverable orphan; a cut cue still
+  carries its note. `cleanupOrphans()` discards orphans permanently.
+- **Delete a note** → every cue pointing at it goes in the same update, so one
+  undo restores both.
+- **Empty a note, then delete again** → the note itself is removed. This is the
+  keyboard route to deleting a note.
+- **Empty the whole document** → the section goes with it.
+
+:::note
+Backspace at a cue boundary selects the cue first; a second delete removes it.
+:::
+
+## Reference
+
+- [Nodes](/docs/api/nodes)
+- [Helpers](/docs/api/helpers)

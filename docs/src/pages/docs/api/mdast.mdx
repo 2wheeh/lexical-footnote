@@ -1,0 +1,41 @@
+# FootnoteMdastExtension [Markdown round-trip]
+
+The optional markdown layer, from `lexical-footnote/mdast`. Add it alongside `@lexical/mdast`'s CommonMark and export extensions and GFM footnotes (`[^id]` / `[^id]: …`) round-trip through markdown exactly. It depends on [`FootnoteExtension`](/docs/api/footnote-extension), and it is kept separate so editors without markdown never load the micromark/mdast machinery it pulls in.
+
+## Usage
+
+Register it next to the mdast extensions you already use.
+
+```ts
+import {FootnoteMdastExtension} from 'lexical-footnote/mdast';
+import {MdastCommonMarkExtension, MdastExportExtension} from '@lexical/mdast';
+import {defineExtension} from 'lexical';
+
+const appExtension = defineExtension({
+  name: 'app',
+  namespace: 'app',
+  dependencies: [
+    MdastCommonMarkExtension,
+    MdastExportExtension,
+    FootnoteMdastExtension,
+  ],
+});
+```
+
+With it registered, importing markdown that contains `[^id]` cues and `[^id]: …` definitions produces real footnotes, and exporting the document back to markdown reproduces them. See the [Markdown guide](/docs/markdown) for the export/import calls and a worked round-trip.
+
+## What it configures
+
+It contributes GFM footnote support to `@lexical/mdast`'s pipeline — the micromark extension that tokenizes `[^…]`, the mdast utilities that read and write it, and import/export rules that map between mdast's `footnoteReference` / `footnoteDefinition` nodes and this package's [`FootnoteRefNode`](/docs/api/nodes#footnoterefnode) / [`FootnoteDefinitionNode`](/docs/api/nodes#footnotedefinitionnode). It registers no output of its own; the behavior is entirely in these rules.
+
+## Behavior
+
+**The section is invisible in markdown.** Markdown has no notes-section construct — it has definitions, keyed by identifier. So on export the [`FootnoteSectionNode`](/docs/api/nodes#footnotesectionnode) flattens to its definitions, and because those are slot values rather than children they are gathered from the slot map and emitted in **derived reference order** (the same GFM numbering the display uses), not slot-map order.
+
+**Definitions normalize into the section on commit.** A `[^id]: …` definition may appear anywhere in the markdown source — GFM does not require it at the end. On import each one is produced as an ordinary node wherever it was declared; a transform then slots it onto the single section in the same commit. The imported document therefore always has the canonical one-section shape, regardless of where the source put its definitions.
+
+## Reference
+
+- [Markdown guide](/docs/markdown) — the import/export calls and round-trip example.
+- [FootnoteExtension](/docs/api/footnote-extension) — the required core dependency.
+- [Nodes](/docs/api/nodes) — the ref/definition/section nodes this maps to and from.

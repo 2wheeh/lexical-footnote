@@ -1,0 +1,120 @@
+# FootnoteExtension [The core extension]
+
+The one extension you register to get footnotes: it contributes the three [nodes](/docs/api/nodes), the self-healing transforms, the deletion policy, the keyboard and pointer UI, and the rule-based HTML importer. Everything else in this package is optional and depends on it — [`FootnoteMdastExtension`](/docs/api/mdast) for markdown, [`FootnoteClipboardExtension`](/docs/api/clipboard) for copy/paste. Registering it is wiring only; the behavior lives in the [helpers](/docs/api/helpers) it wires together.
+
+## Usage
+
+Add it to your app extension's `dependencies` — it pulls in the DOM import/render extensions it needs itself.
+
+```tsx
+import {FootnoteExtension} from 'lexical-footnote';
+import {RichTextExtension} from '@lexical/rich-text';
+import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
+import {defineExtension} from 'lexical';
+
+const appExtension = defineExtension({
+  name: 'app',
+  namespace: 'app',
+  dependencies: [RichTextExtension, FootnoteExtension],
+});
+
+function Editor() {
+  return (
+    <LexicalExtensionComposer extension={appExtension}>
+      {/* … */}
+    </LexicalExtensionComposer>
+  );
+}
+```
+
+Once registered, a literal `[^id]` typed in body text becomes a cue and heals its definition (skipped inside code-formatted text), and the notes section manages itself as the last child of the root. See [Getting Started](/docs/getting-started) for the full setup.
+
+## Config
+
+`FootnoteConfig` is set with `configExtension` when you add the extension. It has one field.
+
+```ts
+import {FootnoteExtension} from 'lexical-footnote';
+import {configExtension} from 'lexical';
+
+configExtension(FootnoteExtension, {dropOrphansOnExport: true});
+```
+
+### dropOrphansOnExport
+
+- **Type:** `boolean`
+- **Default:** `false`
+
+Leave definitions nothing refers to out of the exported HTML, the way GitHub does when it renders. Off by default: this is a document editor, and an orphan note is content the user wrote — dropping it from the model's own serialization would be silent data loss. Turn it on when your HTML is a rendering rather than a document and you want parity with GitHub.
+
+:::note
+Markdown export is unaffected either way. GFM permits an orphan definition in the source; only the HTML rendering discards it. See [HTML Export & Import](/docs/html).
+:::
+
+## INSERT_FOOTNOTE_COMMAND
+
+- **Type:** `LexicalCommand<void>`
+
+Dispatch it to insert a footnote at the current selection. Selected text is kept, the cue is placed after it, and the caret moves into the new note (Word/tiptap semantics).
+
+```ts
+import {INSERT_FOOTNOTE_COMMAND} from 'lexical-footnote';
+
+editor.dispatchCommand(INSERT_FOOTNOTE_COMMAND, undefined);
+```
+
+The extension's [`insertFootnote`](#insertfootnote) output is a thin wrapper around this dispatch — reach for whichever fits your call site.
+
+## Output
+
+The extension's `build` returns an output object: the imperative surface for driving footnotes from outside a node. Read it with `getExtensionDependencyFromEditor`.
+
+```ts
+import {getExtensionDependencyFromEditor} from '@lexical/extension';
+import {FootnoteExtension} from 'lexical-footnote';
+
+const {insertFootnote, gotoDefinition, gotoRef, cleanupOrphans, numbers} =
+  getExtensionDependencyFromEditor(editor, FootnoteExtension).output;
+```
+
+Inside a React tree the same object is available through `useExtensionDependency(FootnoteExtension).output`, and the `numbers` signal through `useExtensionSignalValue(FootnoteExtension, 'numbers')`.
+
+### insertFootnote
+
+- **Type:** `() => void`
+
+Dispatches [`INSERT_FOOTNOTE_COMMAND`](#insert_footnote_command). Equivalent to the command dispatch, as a plain call.
+
+### gotoDefinition
+
+- **Type:** `(footnoteId: string) => void`
+
+Focuses the editor and moves the caret to the start of the note for `footnoteId`, scrolling it into view. This is what a cue click does. No-op if no definition has that id.
+
+### gotoRef
+
+- **Type:** `(footnoteId: string, occurrence?: number) => void`
+
+Focuses the editor and moves the caret to a cue for `footnoteId`, scrolling it into view — the inverse of `gotoDefinition`, and what a backref does. `occurrence` is 1-based and defaults to `1`; a note cited more than once has a cue (and a backref) per occurrence, so `gotoRef(id, 2)` targets the second cue. No-op if that occurrence doesn't exist.
+
+### cleanupOrphans
+
+- **Type:** `() => boolean`
+
+Permanently discards every definition no cue points to — deleted-cue orphans and definitions that never had a cue alike. Runs in a discrete update and returns `true` if it removed at least one. Orphans are kept by default so deleting a cue stays recoverable and cutting one still carries its note; this is the explicit, permanent discard (tiptap's `cleanupOrphanFootnotes`). Wraps the [`$cleanupOrphanFootnotes`](/docs/api/helpers#cleanuporphanfootnotes) helper.
+
+### numbers
+
+- **Type:** `Signal<ReadonlyMap<string, number>>`
+
+The displayed numbering, as a signal of footnote id to its 1-based number. Recomputed on every commit from cue order (GFM numbering — body cues first, then whatever the notes themselves cite), never stored on a node. The map is referentially stable across commits that don't change it, so reading it in a compiled component is safe. Ids with no number (orphans) are absent from the map.
+
+```ts
+numbers.value; // ReadonlyMap<string, number>, e.g. Map { 'a' => 1, 'b' => 2 }
+```
+
+## Reference
+
+- [Nodes](/docs/api/nodes) — the three node classes the extension contributes.
+- [Helpers](/docs/api/helpers) — the `$`-prefixed functions behind this output.
+- [FootnoteMdastExtension](/docs/api/mdast) · [FootnoteClipboardExtension](/docs/api/clipboard) — the optional extensions built on top.

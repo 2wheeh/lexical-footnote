@@ -1,0 +1,87 @@
+# Nodes [The three footnote node types]
+
+The model is three node classes, registered for you by [`FootnoteExtension`](/docs/api/footnote-extension). You rarely construct them by hand — cues appear from typing, commands, or import; the section and definitions manage themselves — but you check for them (`$is*`) in transforms and listeners, and read their ids. Each ships a `$create*` constructor and a `$is*` type guard.
+
+| Node                     | Kind                           | Role                                        |
+| ------------------------ | ------------------------------ | ------------------------------------------- |
+| `FootnoteRefNode`        | inline `DecoratorTextNode`     | a cue — in the body, or inside another note |
+| `FootnoteSectionNode`    | `ElementNode`, last root child | hosts the definitions in named slots        |
+| `FootnoteDefinitionNode` | `ElementNode`, slot value      | one note's flow content                     |
+
+The shape follows GFM: the slot map is the definition map (one definition per identifier is structural), numbering is derived and never stored, and each note renders as its own editable island. See [Model](/docs/model) for the full picture.
+
+## FootnoteRefNode
+
+The inline cue (`[^id]` in GFM), a `DecoratorTextNode` rendered as a superscript number. The number is presentation-only — read from the extension's [`numbers`](/docs/api/footnote-extension#numbers) signal, derived from document order, never stored on the node.
+
+### $createFootnoteRefNode
+
+- **Type:** `(footnoteId: string) => FootnoteRefNode`
+
+A new cue for `footnoteId`. Inserting it into the body heals a matching definition if none exists.
+
+### $isFootnoteRefNode
+
+- **Type:** `(node: LexicalNode | null | undefined) => node is FootnoteRefNode`
+
+Type guard.
+
+### getFootnoteId
+
+- **Type:** `() => string`
+
+The id joining this cue to its note. `getTextContent()` returns the GFM form `` `[^${id}]` ``, which is what makes a literal `[^id]` round-trip and heal.
+
+## FootnoteSectionNode
+
+The `ElementNode` that hosts the definitions, pinned as the last child of the root. It holds definitions in named slots (`fn:<id>`), not as children — its own children channel stays empty, and its DOM is a non-editable shell whose slot containers the reconciler marks as editable islands. There is one section per document; it heals itself if removed while notes remain, and disappears when the document is emptied.
+
+### $createFootnoteSectionNode
+
+- **Type:** `() => FootnoteSectionNode`
+
+Rarely needed directly — the model creates and pins the section when the first footnote appears. Use [`$getFootnoteSection()`](/docs/api/helpers#getfootnotesection) to reach the existing one.
+
+### $isFootnoteSectionNode
+
+- **Type:** `(node: LexicalNode | null | undefined) => node is FootnoteSectionNode`
+
+Type guard.
+
+:::warning[Definitions are slot values]
+Because definitions live in slots, they are **not** reachable through `section.getChildren()`, and `definition.remove()` — a children-channel operation — does not detach one. To enumerate notes use [`$getFootnoteDefinitions()`](/docs/api/helpers#getfootnotedefinitions); to delete one use [`$removeFootnoteDefinition(id)`](/docs/api/helpers#removefootnotedefinition). This is the single most common footing-error when working with the model directly.
+:::
+
+## FootnoteDefinitionNode
+
+One note's content (`[^id]: …` in GFM): an `ElementNode` holding flow content (paragraphs) as its children, and itself a slot value on the section. So it has no parent and no siblings — the reconciler renders it as an editable island wherever the section's render override places its container.
+
+### $createFootnoteDefinitionNode
+
+- **Type:** `(footnoteId: string) => FootnoteDefinitionNode`
+
+A new, empty note carrying `footnoteId`. Importers create these as ordinary nodes wherever the source declared them; a transform slots each onto the section on commit.
+
+### $isFootnoteDefinitionNode
+
+- **Type:** `(node: LexicalNode | null | undefined) => node is FootnoteDefinitionNode`
+
+Type guard.
+
+### getFootnoteId
+
+- **Type:** `() => string`
+
+The id keying this note to its slot and to its cues.
+
+### setFootnoteId
+
+- **Type:** `(valueOrUpdater: string | ((prev: string) => string)) => this`
+
+Re-keys the note. Used on paste to re-key a carried note whose id collides with a different note already in the document (see [Clipboard](/docs/api/clipboard)).
+
+## Reference
+
+- [FootnoteExtension](/docs/api/footnote-extension) — registers all three nodes.
+- [Helpers](/docs/api/helpers) — the `$`-prefixed functions for querying and mutating them.
+- [Model](/docs/model) — why the section keeps definitions in slots.
