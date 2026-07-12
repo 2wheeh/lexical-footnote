@@ -12,7 +12,7 @@
   "scripts": {
     "build": "pnpm --filter lexical-footnote build",
     "dev": "pnpm --filter docs dev",
-    "typecheck": "pnpm --filter lexical-footnote typecheck",
+    "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter lexical-footnote test",
     "test:browser": "pnpm --filter lexical-footnote test:browser",
     "test:all": "pnpm --filter lexical-footnote test:all",
