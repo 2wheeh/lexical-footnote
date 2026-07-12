@@ -60,20 +60,6 @@ export class FootnoteSectionNode extends ElementNode {
    * definitions in derived reference order.
    */
   exportDOM(editor: LexicalEditor): DOMExportOutput {
-    const section = document.createElement('section');
-    section.setAttribute('data-footnotes', '');
-    section.setAttribute('class', 'footnotes');
-    // What every cue's aria-describedby points at. Visually hidden by the
-    // host's stylesheet (GitHub's is `sr-only`), so it names the section for
-    // a screen reader without adding a heading to the page.
-    const label = document.createElement('h2');
-    label.setAttribute('id', FOOTNOTE_LABEL_ID);
-    label.setAttribute('class', 'sr-only');
-    label.textContent = 'Footnotes';
-    section.appendChild(label);
-    const list = document.createElement('ol');
-    section.appendChild(list);
-
     const numbers = $computeFootnoteNumbers();
     // Orphans are kept, unlike GitHub — which drops any definition nothing
     // refers to. Our HTML is a document format, not only a rendering: an
@@ -91,13 +77,13 @@ export class FootnoteSectionNode extends ElementNode {
     const ids = $getDefinitionEntries(this)
       .map(entry => entry.footnoteId)
       .filter(id => !dropOrphans || numbers.has(id));
-    for (const footnoteId of orderFootnoteIds(ids, numbers)) {
-      const definition = $getDefinitionSlot(this, footnoteId);
-      if (definition) {
-        $appendNodeToHTML(editor, definition, list);
-      }
-    }
-    return {element: section};
+    return {
+      element: $buildFootnoteSectionDOM(
+        editor,
+        this,
+        orderFootnoteIds(ids, numbers),
+      ),
+    };
   }
 
   canIndent(): false {
@@ -113,6 +99,39 @@ export class FootnoteSectionNode extends ElementNode {
   canBeEmpty(): false {
     return false;
   }
+}
+
+/**
+ * GitHub's footnote-section shape, for the given ids in the given order:
+ * `<section data-footnotes><h2 id=footnote-label class=sr-only><ol><li>…`.
+ * Shared by the section's exportDOM (every definition, display order) and
+ * the clipboard carry (just the notes a copied selection references).
+ */
+export function $buildFootnoteSectionDOM(
+  editor: LexicalEditor,
+  section: FootnoteSectionNode,
+  footnoteIds: readonly string[],
+): HTMLElement {
+  const sectionEl = document.createElement('section');
+  sectionEl.setAttribute('data-footnotes', '');
+  sectionEl.setAttribute('class', 'footnotes');
+  // What every cue's aria-describedby points at. Visually hidden by the
+  // host's stylesheet (GitHub's is `sr-only`), so it names the section for
+  // a screen reader without adding a heading to the page.
+  const label = document.createElement('h2');
+  label.setAttribute('id', FOOTNOTE_LABEL_ID);
+  label.setAttribute('class', 'sr-only');
+  label.textContent = 'Footnotes';
+  sectionEl.appendChild(label);
+  const list = document.createElement('ol');
+  sectionEl.appendChild(list);
+  for (const footnoteId of footnoteIds) {
+    const definition = $getDefinitionSlot(section, footnoteId);
+    if (definition) {
+      $appendNodeToHTML(editor, definition, list);
+    }
+  }
+  return sectionEl;
 }
 
 /**
