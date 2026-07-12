@@ -36,7 +36,8 @@
         "types": "./dist/clipboard.d.cts",
         "default": "./dist/clipboard.cjs"
       }
-    }
+    },
+    "./styles.css": "./dist/styles.css"
   },
   "engines": {
     "node": ">=18"
