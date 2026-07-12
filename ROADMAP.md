@@ -15,9 +15,6 @@ matters to you, open an issue so it gets prioritized.
 
 ## Editing & interop
 
-- [ ] **Carry the definition in the clipboard** — a cue pasted without its
-  section heals an *empty* note, so cut-and-paste moves the cue but not the
-  text. The fix is putting definitions in the clipboard payload.
 - [ ] Markdown export id normalization — `[^k3j9x2m1]` → sequential `[^1]`,
   preserving authored labels.
 - [ ] Plain-text copy of a cue exposes the raw id — derive something readable.
@@ -39,7 +36,8 @@ matters to you, open an issue so it gets prioritized.
 - [ ] Screen-reader pass (VoiceOver) — the exported HTML carries GFM's a11y
   contract, but no screen reader has read it yet.
 - [ ] Extend the browser test project beyond the caret: click-to-jump,
-  backref focus, paste. Run it in CI, with `publint`/`attw`.
+  backref focus, real-clipboard copy/paste (the carry behavior is
+  headless-verified only). Run it in CI, with `publint`/`attw`.
 - [ ] Export walks the document once per footnote node — fine at document
   scale; revisit if it bites.
 
@@ -52,11 +50,16 @@ matters to you, open an issue so it gets prioritized.
   `$getSlotTargetElement` render override, `canBeEmpty()` on non-editable
   slot hosts, Firefox caret at slot-island boundaries.
 
-## Done (0.2.0)
+## Done
 
-Definitions became named slots on the section — the slot map *is* the GFM
-definition map (see README "Model"). With it: per-cue backrefs and ids,
-nested footnotes with GFM's numbering, a deletion policy codified in tests,
-paste from Word / Google Docs / GitHub, a cross-browser caret spec
+Since 0.2.1: copy carries the notes a selection references (`text/html` and
+Lexical JSON payloads), and paste re-keys a carried footnote whose id names
+a different note in the target document — cut-and-paste moves the text, and
+a paste can't overwrite an existing note (see README "Clipboard").
+
+In 0.2.0, definitions became named slots on the section — the slot map *is*
+the GFM definition map (see README "Model"). With it: per-cue backrefs and
+ids, nested footnotes with GFM's numbering, a deletion policy codified in
+tests, paste from Word / Google Docs / GitHub, a cross-browser caret spec
 (Chromium/Firefox/WebKit), and the `model/` / `ui/` / `io/` split. History
 has the reasoning: `git log v0.1.4..v0.2.0`.

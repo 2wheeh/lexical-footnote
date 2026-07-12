@@ -78,8 +78,12 @@ declared anywhere in the source are normalized into the section.
 import {FootnoteClipboardExtension} from 'lexical-footnote/clipboard';
 ```
 
-Routes `text/html` pastes through rule-based import (the default paste path
-never consults it), so footnote-bearing HTML pastes as real footnotes.
+**Copy** carries the notes a selection references — nested citations
+included — appended to `text/html` as a GFM footnote section and to the
+Lexical JSON payload, so a cue pasted elsewhere brings its text along.
+
+**Paste** routes `text/html` through rule-based import (the default paste
+path never consults it), so footnote-bearing HTML pastes as real footnotes.
 Recognized and verified in Chrome, Firefox, and Safari:
 
 - **Word** — desktop and web, including Safari's sanitized clipboard
@@ -87,8 +91,11 @@ Recognized and verified in Chrome, Firefox, and Safari:
   definitions — a Docs limitation — and paste as cues with empty notes)
 - **GitHub**'s rendered GFM, and this package's own `exportDOM`
 
-Source chrome (separators, literal markers, backrefs) is stripped; pasted
-footnotes get fresh ids so a paste can't merge into existing notes.
+Source chrome (separators, literal markers, backrefs) is stripped, and a
+paste can never clobber existing notes: Word/Docs footnotes get fresh ids,
+and a carried footnote whose id names a *different* note in this document
+is re-keyed on arrival. Same-content pastes keep their id, so cutting a cue
+and pasting it back reconnects, and multiple cues keep sharing one note.
 
 ### HTML
 
