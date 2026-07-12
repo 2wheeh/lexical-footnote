@@ -6,3 +6,4 @@ docs/src/pages.gen.ts
 __screenshots__/
 .omc/
 .idea/
+.claude/

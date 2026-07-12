@@ -18,7 +18,8 @@ npm i lexical-footnote
 
 ## Register the extension
 
-```tsx
+```tsx twoslash
+import {buildEditorFromExtensions} from '@lexical/extension';
 import {FootnoteExtension} from 'lexical-footnote';
 
 const editor = buildEditorFromExtensions({
