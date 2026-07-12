@@ -31,9 +31,8 @@ editor.update(() => $convertFromMarkdownString(source)); // [^id] → cue + note
 editor.read(() => $convertToMarkdownString()); // notes → [^id]: … definitions
 ```
 
-That exact extension, running — the `defineExtension` block above is included
-from the demo's own source. Edit the document (a literal `[^id]` works) and
-watch the serialization follow.
+The extension above, live — type (a literal `[^id]` works) and the
+serialization follows:
 
 <MarkdownExample />
 
@@ -68,13 +67,6 @@ More body text.
 
 Orphan definitions — a `[^id]: …` that nothing cites — are legal in GFM and are
 preserved through the round-trip rather than dropped.
-
-## A limitation
-
-Exported ids are the raw identifiers. Ones you wrote by hand survive verbatim;
-ones the editor generated export as their internal key, so an inserted note
-looks like `[^k3j9x2m1]` in the markdown. Sequential renumbering on export
-(`[^1]`, `[^2]`, …) is on the [roadmap](https://github.com/2wheeh/lexical-footnote/blob/main/ROADMAP.md).
 
 ## Reference
 

@@ -88,7 +88,7 @@ function Body({contentEditable, children}: EditorChildrenComponentProps) {
   }, [editor]);
 
   return (
-    <div className="docs-demo-grid">
+    <div className="docs-demo-stack">
       <figure className="docs-demo">
         <figcaption>Edit — the notes too</figcaption>
         {contentEditable}

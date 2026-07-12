@@ -1,15 +1,16 @@
 'use client';
 
 /**
- * Live demo for the Styling guide: the same seeded document twice — once
- * inheriting the page (the stylesheet's zero-config mode), once wrapped in
- * `.fn-themed`, the token set the guide shows. footnoteTheme.css is
- * `[!include]`d into the page's code block whole — the CSS you read is the
- * CSS running here (plus a docs-only theme-toggle shim, kept in a separate
- * file precisely so it never appears in the guide).
+ * Live demo for the Styling guide: a `.fn-themed` editor with one color
+ * picker per token. footnoteTheme.css (the guide's code block, `[!include]`d
+ * whole) sets the starting values; the pickers write the same custom
+ * properties inline. A docs-only theme-toggle shim lives in
+ * footnoteTheme.docs.css, kept separate so it never appears in the guide.
  */
 
-import {useEffect, useState} from 'react';
+import type {CSSProperties} from 'react';
+
+import {useEffect, useRef, useState} from 'react';
 
 import {HistoryExtension} from '@lexical/history';
 import {LexicalExtensionComposer} from '@lexical/react/LexicalExtensionComposer';
@@ -34,10 +35,14 @@ import './examples.css';
 import './footnoteTheme.css';
 import './footnoteTheme.docs.css';
 
-/**
- * Two updates, like the package's own tests: the definition doesn't exist
- * until the healing transform commits, so its text lands in a second pass.
- */
+const TOKENS = [
+  '--lexical-footnote-accent',
+  '--lexical-footnote-accent-contrast',
+  '--lexical-footnote-note-color',
+  '--lexical-footnote-rule-color',
+] as const;
+
+/** Definitions heal on commit, so the note's text lands in a second pass. */
 function seed(editor: LexicalEditor) {
   editor.update(
     () => {
@@ -77,19 +82,51 @@ const extension = defineExtension({
 });
 
 function Demo() {
+  const figureRef = useRef<HTMLElement>(null);
+  const [colors, setColors] = useState<Record<string, string>>({});
+
+  // Custom properties come back as declared (hex, theme-resolved), so the
+  // pickers can start from whatever footnoteTheme.css put on the wrapper.
+  useEffect(() => {
+    const figure = figureRef.current;
+    if (!figure) {
+      return;
+    }
+    const computed = getComputedStyle(figure);
+    setColors(current => {
+      const next = {...current};
+      for (const token of TOKENS) {
+        next[token] ??= computed.getPropertyValue(token).trim();
+      }
+      return next;
+    });
+  }, []);
+
   return (
-    <div className="docs-demo-grid">
-      <figure className="docs-demo">
-        <figcaption>Zero configuration — inherits this page</figcaption>
-        <LexicalExtensionComposer extension={extension} />
-      </figure>
-      <figure className="docs-demo fn-themed">
-        <figcaption>
-          <code>.fn-themed</code> — the tokens above
-        </figcaption>
-        <LexicalExtensionComposer extension={extension} />
-      </figure>
-    </div>
+    <figure
+      className="docs-demo fn-themed"
+      ref={figureRef}
+      style={colors as CSSProperties}
+    >
+      <figcaption className="docs-demo-tokens">
+        {TOKENS.map(token => (
+          <label key={token}>
+            {token.replace('--lexical-footnote-', '')}
+            <input
+              type="color"
+              value={colors[token] ?? '#000000'}
+              onChange={event =>
+                setColors(current => ({
+                  ...current,
+                  [token]: event.target.value,
+                }))
+              }
+            />
+          </label>
+        ))}
+      </figcaption>
+      <LexicalExtensionComposer extension={extension} />
+    </figure>
   );
 }
 

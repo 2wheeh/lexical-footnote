@@ -1,0 +1,82 @@
+/**
+ * The landing hero is itself the footnote anatomy: the title carries a cue,
+ * the tagline is note 1 under the short GFM-style rule, and the cue/backref
+ * are plain in-page anchors — the same interaction the package ships,
+ * rendered with zero JS.
+ */
+
+.landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(3rem, 12vh, 7rem) 1.5rem 4rem;
+}
+
+.landing-title {
+  margin: 0;
+  font-size: clamp(2.25rem, 6vw, 3.25rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.landing-title sup {
+  font-size: 0.45em;
+  line-height: 0;
+}
+
+.landing-title sup a {
+  color: var(--vocs-color_textAccent, currentColor);
+  text-decoration: none;
+  padding: 0.1em 0.25em;
+  border-radius: 0.3em;
+}
+
+.landing-title sup a:hover,
+.landing-title sup a:focus-visible {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  outline: none;
+}
+
+.landing-actions {
+  margin-top: 2.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.landing-rule {
+  width: 7rem;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  margin: 3.5rem auto 1.25rem;
+}
+
+.landing-note {
+  margin: 0;
+  max-width: 34rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+
+.landing-note-num {
+  color: var(--vocs-color_textAccent, currentColor);
+  margin-right: 0.4em;
+}
+
+.landing-backref {
+  color: var(--vocs-color_textAccent, currentColor);
+  text-decoration: none;
+  margin-left: 0.35em;
+  padding: 0 0.25em;
+  border-radius: 0.3em;
+}
+
+.landing-backref:hover,
+.landing-backref:focus-visible {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  outline: none;
+}
