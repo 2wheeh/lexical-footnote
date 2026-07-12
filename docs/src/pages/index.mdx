@@ -31,7 +31,8 @@ Type `[^note]` and a footnote heals into existence. Numbering is computed,
 never stored; export matches GitHub's HTML exactly; Word, Google Docs, and
 GitHub pastes arrive as real footnotes.
 
-```tsx
+```tsx twoslash
+import {buildEditorFromExtensions} from '@lexical/extension';
 import {FootnoteExtension} from 'lexical-footnote';
 
 const editor = buildEditorFromExtensions({

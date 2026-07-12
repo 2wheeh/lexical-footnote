@@ -1,0 +1,217 @@
+/* ═══ lexical-footnote/styles.css ═══
+   The package's default stylesheet. Host-agnostic: styles ONLY the
+   footnote anatomy, inherits the host's typography and colors, sizes in em.
+
+   Theme tokens (all optional — fallbacks work on any light/dark host):
+     --lexical-footnote-accent      cue numbers, list markers, backrefs,
+                                    focus rings. Falls back to currentColor.
+     --lexical-footnote-note-color  text color of the notes section.
+                                    Falls back to a softened currentColor.
+     --lexical-footnote-rule-color  the short separator rule above the
+                                    notes. Falls back to a faint currentColor.
+     --lexical-footnote-accent-contrast
+                                    text on top of a solid accent fill
+                                    (focused/selected cue and backref).
+                                    Falls back to the `Canvas` system color
+                                    (the page background under the host's
+                                    color-scheme), so the unthemed default
+                                    reads as an inverted badge on any host.
+*/
+
+/* ── Cue ──────────────────────────────────────────────────────────────
+   [^id] in the body: `<span class="lexical-footnote__ref"><sup><button>`.
+   The button is the superscript itself: shrunk and raised off the
+   baseline, line-height 0 so it never disturbs the leading of the host
+   line. Vertical padding gives it a real hit/focus target without
+   reintroducing that disturbance: on this inline box it paints (and
+   extends the click/focus area) past the collapsed line box rather than
+   growing it. */
+.lexical-footnote__ref {
+  white-space: nowrap;
+}
+
+/* The browser's own `<sup>` already shrinks (~75%), raises (top: -0.5em)
+   and zeroes the line-height of anything inside it — the same job the
+   button rule below does deliberately. Left alone, the two compound
+   (an effective ~54% size and a doubled raise) instead of stacking as one
+   clean shrink. Neutralized here so the button's own font-size/top are
+   the only ones in effect. */
+.lexical-footnote__ref sup {
+  font-size: 100%;
+  top: 0;
+}
+
+.lexical-footnote__ref button {
+  background: none;
+  border: 0;
+  border-radius: 0.2em;
+  color: var(--lexical-footnote-accent, currentColor);
+  cursor: pointer;
+  font: inherit;
+  font-feature-settings:
+    'lnum' 1,
+    'tnum' 1;
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 0;
+  margin: 0;
+  padding: 0.62em 0.12em;
+  position: relative;
+  top: -0.52em;
+  vertical-align: baseline;
+}
+
+.lexical-footnote__ref button:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* Visible keyboard focus — a11y default, part of the shipped stylesheet.
+   Solid accent fill with contrasting text (the inverted-badge look), not a
+   soft wash — focus must be unmistakable at superscript size. */
+.lexical-footnote__ref button:focus-visible {
+  background: var(--lexical-footnote-accent, currentColor);
+  color: var(--lexical-footnote-accent-contrast, Canvas);
+  outline: 2px solid var(--lexical-footnote-accent, currentColor);
+  outline-offset: 2px;
+}
+
+/* Node-selected state (caret selected the cue, e.g. backspace at its
+   boundary). The extension puts the `--selected` class on the inner
+   `<sup>`, not the outer `.lexical-footnote__ref` span — the descendant
+   selector below reaches the button either way. Same inverted badge as
+   keyboard focus — one visual language for "this cue is active". */
+.lexical-footnote__ref--selected button {
+  background: var(--lexical-footnote-accent, currentColor);
+  color: var(--lexical-footnote-accent-contrast, Canvas);
+}
+
+/* ── Notes section ────────────────────────────────────────────────────
+   Last child of the document. The short rule above it is the oldest
+   convention in the book — a hand-width, not a full-width divider. */
+section[data-lexical-footnote-section] {
+  color: var(
+    --lexical-footnote-note-color,
+    color-mix(in srgb, currentColor 74%, transparent)
+  );
+  font-size: 0.85em;
+  line-height: 1.6;
+  margin: 3em 0 0;
+  padding: 1em 0 0;
+  position: relative;
+}
+
+section[data-lexical-footnote-section]::before {
+  border-top: 1px solid
+    var(
+      --lexical-footnote-rule-color,
+      color-mix(in srgb, currentColor 34%, transparent)
+    );
+  content: '';
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 6em;
+}
+
+/* The <ol> carries the numbering; markers pick up the accent so the
+   numbers at the bottom rhyme with the cues in the body. DOM order here is
+   slot-map (code-unit) order, not display order: the extension projects
+   visual position via the `<li>`'s `order` (hence `display: flex` here —
+   `order` is a no-op without a flex/grid container) and the marker number
+   via its `value` attribute. `gap` (not a sibling margin) spaces the
+   notes, since a DOM-adjacency selector would mis-space them once `order`
+   makes DOM order and visual order diverge. */
+ol[data-lexical-footnote-list] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  margin: 0;
+  padding: 0 0 0 1.7em;
+}
+
+.lexical-footnote__item {
+  list-style: decimal;
+  padding-left: 0.25em;
+}
+
+.lexical-footnote__item::marker {
+  color: var(--lexical-footnote-accent, currentColor);
+  font-feature-settings:
+    'lnum' 1,
+    'tnum' 1;
+  font-weight: 600;
+}
+
+/* Each definition is its own contentEditable island — no frame, no
+   outline; it should read as plain typeset matter until focused. The
+   [data-lexical-slot] element is the reconciler-owned container between
+   the <li> and the definition, and it takes focus too. */
+.lexical-footnote__item > [data-lexical-slot],
+.lexical-footnote__definition {
+  outline: none;
+}
+
+.lexical-footnote__definition > p {
+  margin: 0 0 0.35em;
+}
+
+.lexical-footnote__definition > p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Backrefs (↩) ─────────────────────────────────────────────────────
+   Real buttons in an overlay OUTSIDE the contentEditable, absolutely
+   positioned by the extension at the end of each note's last line.
+   The overlay itself is transparent to the pointer; only the buttons
+   take clicks. Needs a positioned ancestor around editor + overlay. */
+.lexical-footnote__backref-overlay {
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+/* One run per note; one button per cue (a note cited twice can be left
+   in two directions). Only the run is positioned, by measured coords. */
+.lexical-footnote__backrefs {
+  display: inline-flex;
+  gap: 0.35em;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.lexical-footnote__backref {
+  background: none;
+  border: 0;
+  border-radius: 0.25em;
+  color: var(--lexical-footnote-accent, currentColor);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85em;
+  margin: 0;
+  padding: 0 0.2em;
+  pointer-events: auto;
+}
+
+.lexical-footnote__backref sup {
+  font-feature-settings:
+    'lnum' 1,
+    'tnum' 1;
+  font-size: 0.7em;
+  font-weight: 600;
+}
+
+.lexical-footnote__backref:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* Backrefs receive focus programmatically (ArrowRight from a note's
+   end), so plain :focus — it must be visible however it was reached. */
+.lexical-footnote__backref:focus {
+  /* The solid badge is the focus indicator — no outline ring on top of
+     it; the fill + text inversion is already an unmistakable change. */
+  background: var(--lexical-footnote-accent, currentColor);
+  color: var(--lexical-footnote-accent-contrast, Canvas);
+  outline: none;
+}

@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@floating-ui/react": "^0.27.20",
     "@lexical/clipboard": "0.47.0",
     "@lexical/extension": "0.47.0",
     "@lexical/history": "0.47.0",
@@ -21,6 +22,7 @@
     "lexical-footnote": "workspace:*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "shiki": "^3.23.0",
     "vocs": "^2.3.3",
     "waku": "^1.0.0-beta.6"
   },

@@ -114,6 +114,29 @@ your HTML is a rendering rather than a document, opt into GitHub's behavior
 configExtension(FootnoteExtension, {dropOrphansOnExport: true});
 ```
 
+### Styling (optional)
+
+```ts
+import 'lexical-footnote/styles.css';
+```
+
+The default look for the footnote anatomy — superscript cues, the short
+separator rule, the numbered notes list, the `↩` backrefs. Host-agnostic:
+it inherits your typography and colors, sizes in `em`, and works on any
+light or dark background with zero configuration. Re-skin it by setting a
+handful of custom properties (all optional):
+
+| Token                                | What it colors                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| `--lexical-footnote-accent`          | cue numbers, list markers, backrefs, focus fills (falls back to `currentColor`) |
+| `--lexical-footnote-accent-contrast` | text on the solid focus/selected fill (falls back to the `Canvas` system color) |
+| `--lexical-footnote-note-color`      | the notes section's text (falls back to a softened `currentColor`)              |
+| `--lexical-footnote-rule-color`      | the separator rule above the notes (falls back to a faint `currentColor`)       |
+
+Skipping the stylesheet entirely and styling the class names /
+data-attributes yourself is equally supported — nothing in the runtime
+depends on it.
+
 ## Behavior notes
 
 - Inserting keeps selected text, places the cue after it, and moves the caret
