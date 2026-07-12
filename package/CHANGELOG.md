@@ -1,0 +1,33 @@
+# lexical-footnote
+
+## 0.3.0
+
+### Minor Changes
+
+- [`ef04d09`](https://github.com/2wheeh/lexical-footnote/commit/ef04d09efff4b921c699412937944c119eba8dda) Thanks [@2wheeh](https://github.com/2wheeh)! - Copy now carries the notes a selection references — appended to `text/html`
+  as a GFM footnote section and to the Lexical JSON payload — so a cue pasted
+  elsewhere brings its text along. Paste re-keys a carried footnote whose id
+  names a different note in the target document, so a paste can never
+  overwrite an existing note; same-content pastes keep their id, so
+  cut-and-paste reconnects and multiple cues keep sharing one note.
+
+- [#1](https://github.com/2wheeh/lexical-footnote/pull/1) [`9f098f6`](https://github.com/2wheeh/lexical-footnote/commit/9f098f6412ea77ae7aa6b094518efc6ef60d1803) Thanks [@2wheeh](https://github.com/2wheeh)! - The package now ships a default stylesheet, `lexical-footnote/styles.css` —
+  the out-of-the-box look for the footnote anatomy (superscript cues, the
+  short separator rule, the numbered notes list, `↩` backrefs). Host-agnostic:
+  it inherits the host's typography and colors, sizes in `em`, and works on
+  any light or dark background with zero configuration. Themeable via
+  optional `--lexical-footnote-*` custom properties (accent,
+  accent-contrast, note-color, rule-color); styling the class names yourself
+  without the stylesheet remains fully supported.
+
+### Patch Changes
+
+- [#1](https://github.com/2wheeh/lexical-footnote/pull/1) [`b7a288e`](https://github.com/2wheeh/lexical-footnote/commit/b7a288e3ec048c1de663036eaf34efc0ad4f5ef8) Thanks [@2wheeh](https://github.com/2wheeh)! - Fixed an unrecoverable editor state: deleting the whole body when footnotes
+  existed (e.g. select-all + backspace, which removes the last paragraph as a
+  block) could leave the footnote section as the root's only child — a
+  non-editable shell with no caret position anywhere, so typing became
+  impossible. The root transform now guarantees a body paragraph next to the
+  section and restores the caret when the deletion left it pointing at
+  removed nodes; the empty-body policy then converges to the same end state
+  as an ordinary select-all delete (section discarded, one undo restores
+  everything).
