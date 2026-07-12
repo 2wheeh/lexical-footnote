@@ -66,6 +66,18 @@
   color: color-mix(in srgb, currentColor 72%, transparent);
 }
 
+.landing-note a:not(.landing-backref) {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.landing-note a:not(.landing-backref):hover {
+  color: var(--landing-accent, currentColor);
+  text-decoration-color: currentColor;
+}
+
 .landing-note-num {
   color: var(--landing-accent, currentColor);
   margin-right: 0.4em;

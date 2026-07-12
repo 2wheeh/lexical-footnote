@@ -30,8 +30,8 @@ export function Landing({children}: {children?: ReactNode}) {
       <hr className="landing-rule" aria-hidden="true" />
       <p className="landing-note" id="tagline">
         <span className="landing-note-num">1.</span>
-        GFM footnotes for Lexical — cues, notes, in-page links, and markdown
-        round-trip.
+        GFM footnotes for <a href="https://lexical.dev/">Lexical</a> — cues,
+        notes, in-page links, and markdown round-trip.
         <a
           className="landing-backref"
           href="#tagline-ref"

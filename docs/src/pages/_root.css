@@ -39,11 +39,13 @@ html[data-vocs-theme='dark'] {
 
 /*
  * The sidebar's playground entry is a standout button — accent border,
- * fill, and text. Scoped to [data-v-sidebar]: the top-nav tab and any
- * in-content links keep their default styling.
+ * fill, and text. Scoped to the item's own data-v-sidebar-item (after
+ * hydration a layout-level wrapper also carries data-v-sidebar, so an
+ * ancestor scope would leak to the top-nav tab and content links): the
+ * top-nav tab and any in-content links keep their default styling.
  */
 
-[data-v-sidebar] a[href='/playground'] {
+a[data-v-sidebar-item][href='/playground'] {
   margin-top: 1.25rem;
   border: 1px solid color-mix(in srgb, var(--landing-accent) 45%, transparent);
   background: color-mix(in srgb, var(--landing-accent) 12%, transparent);
@@ -52,7 +54,7 @@ html[data-vocs-theme='dark'] {
   font-weight: 500;
 }
 
-[data-v-sidebar] a[href='/playground']:hover {
+a[data-v-sidebar-item][href='/playground']:hover {
   background: color-mix(in srgb, var(--landing-accent) 20%, transparent);
   color: var(--landing-accent);
 }
