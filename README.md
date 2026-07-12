@@ -29,10 +29,6 @@ const appExtension = defineExtension({
 [Documentation](https://lexical-footnote.vercel.app) ·
 [Playground](https://lexical-footnote.vercel.app/playground)
 
-- **[`package/`](./package)** — the [`lexical-footnote`](https://www.npmjs.com/package/lexical-footnote) npm package
-- **[`docs/`](./docs)** — the documentation site ([vocs](https://vocs.dev))
-- **[ROADMAP.md](./ROADMAP.md)**
-
 ## License
 
 MIT
