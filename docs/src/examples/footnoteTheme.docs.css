@@ -1,0 +1,21 @@
+/**
+ * Docs-site adaptation of footnoteTheme.css, kept out of the file the guide
+ * shows: this site's theme toggle stamps html[data-vocs-theme], which must
+ * win over the OS preference in both directions. A real app keying off
+ * prefers-color-scheme (as the example does) or its own theming doesn't
+ * need this.
+ */
+
+html[data-vocs-theme='light'] .fn-themed {
+  --lexical-footnote-accent: #2563eb;
+  --lexical-footnote-accent-contrast: #ffffff;
+  --lexical-footnote-note-color: #4b5563;
+  --lexical-footnote-rule-color: #d1d5db;
+}
+
+html[data-vocs-theme='dark'] .fn-themed {
+  --lexical-footnote-accent: #60a5fa;
+  --lexical-footnote-accent-contrast: #0b0f1a;
+  --lexical-footnote-note-color: #9ca3af;
+  --lexical-footnote-rule-color: #374151;
+}

@@ -1,3 +1,5 @@
+import {StylingExample} from '../../examples/stylingExample';
+
 # Styling [Tokens, the selector contract, and theming]
 
 The shipped stylesheet dresses the footnote anatomy — superscript cues, the
@@ -55,24 +57,18 @@ through its `value`. Style off the list and its markers, not DOM adjacency.
 
 ## Theming example
 
-Set the tokens per color scheme and the whole anatomy follows:
+Tokens inherit, so set them on `:root` or on any ancestor — here a
+`.fn-themed` wrapper — per color scheme, and the whole anatomy follows:
 
 ```css
-:root {
-  --lexical-footnote-accent: #2563eb;
-  --lexical-footnote-note-color: #4b5563;
-  --lexical-footnote-rule-color: #d1d5db;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --lexical-footnote-accent: #60a5fa;
-    --lexical-footnote-accent-contrast: #0b0f1a;
-    --lexical-footnote-note-color: #9ca3af;
-    --lexical-footnote-rule-color: #374151;
-  }
-}
+// [!include ~/examples/footnoteTheme.css]
 ```
+
+Below, the same seeded document twice: bare stylesheet on the left, the
+tokens above on the right. Both are live editors — the CSS block is included
+from the demo's own source.
+
+<StylingExample />
 
 ## Reference
 
