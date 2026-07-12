@@ -1,5 +1,11 @@
 # lexical-footnote
 
+## 0.3.1
+
+### Patch Changes
+
+- [#3](https://github.com/2wheeh/lexical-footnote/pull/3) [`c0185f5`](https://github.com/2wheeh/lexical-footnote/commit/c0185f5a1e001503ac8f0c4109c59c6754dac03c) Thanks [@2wheeh](https://github.com/2wheeh)! - Expose `./package.json` in the exports map so tooling (docs sites, bundlers, `require.resolve`) can read package metadata.
+
 ## 0.3.0
 
 ### Minor Changes
