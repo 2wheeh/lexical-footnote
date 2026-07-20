@@ -105,6 +105,9 @@ importers:
       mdast-util-gfm-footnote:
         specifier: ^2.1.0
         version: 2.1.0
+      mdast-util-to-markdown:
+        specifier: ^2.1.0
+        version: 2.1.2
       micromark-extension-gfm-footnote:
         specifier: ^2.1.0
         version: 2.1.0
