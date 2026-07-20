@@ -15,10 +15,7 @@ import {
   $getFootnoteDefinitions,
   $getFootnoteSection,
 } from '../../FootnoteExtension';
-import {
-  $isFootnoteRefNode,
-  FootnoteRefNode,
-} from '../../nodes/FootnoteRefNode';
+import {$isFootnoteRefNode, FootnoteRefNode} from '../../nodes/FootnoteRefNode';
 import {FootnoteMdastExtension} from '../../mdast';
 
 describe('mdast round-trip', () => {
