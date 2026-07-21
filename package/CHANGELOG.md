@@ -1,5 +1,11 @@
 # lexical-footnote
 
+## 0.3.2
+
+### Patch Changes
+
+- [#5](https://github.com/2wheeh/lexical-footnote/pull/5) [`1ba7864`](https://github.com/2wheeh/lexical-footnote/commit/1ba7864d59ceda7af6d042712ed8d7c858d10c8e) Thanks [@2wheeh](https://github.com/2wheeh)! - Fix markdown (mdast) round-trip losing text format on footnote cues. Import now applies the surrounding emphasis/strong/delete context to the cue's format bitmask, and export re-wraps the cue per its format bits (emphasis innermost, matching core text serialization). A contributed to-markdown root handler folds adjacent same-type phrasing wrappers back together before serialization, so a formatted cue merges with neighboring same-format text (`**x[^a]**`) instead of serializing as the non-re-parseable `**x****[^a]**`.
+
 ## 0.3.1
 
 ### Patch Changes
