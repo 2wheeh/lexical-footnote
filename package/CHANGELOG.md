@@ -1,5 +1,11 @@
 # lexical-footnote
 
+## 0.3.3
+
+### Patch Changes
+
+- [#7](https://github.com/2wheeh/lexical-footnote/pull/7) [`2ea8079`](https://github.com/2wheeh/lexical-footnote/commit/2ea80797573296e16b69bad6b108bf13a93e72c3) Thanks [@2wheeh](https://github.com/2wheeh)! - Migrate the release pipeline to Changesets v3.
+
 ## 0.3.2
 
 ### Patch Changes
